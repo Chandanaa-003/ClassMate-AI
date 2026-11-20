@@ -7,6 +7,7 @@ from app.schemas.classroom import (
     ClassroomResponse,
 )
 from app.schemas.health import HealthCheckResponse
+from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate
 from app.schemas.user import Token, TokenPayload, UserCreate, UserLogin, UserResponse, UserRole
 
 __all__ = [
@@ -16,6 +17,9 @@ __all__ = [
     "ClassroomMemberResponse",
     "ClassroomResponse",
     "HealthCheckResponse",
+    "SubjectCreate",
+    "SubjectResponse",
+    "SubjectUpdate",
     "Token",
     "TokenPayload",
     "UserCreate",

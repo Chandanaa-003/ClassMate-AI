@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.subject import Subject
+    from app.models.user import User
 
 
 class Classroom(Base):
@@ -31,6 +35,11 @@ class Classroom(Base):
     lecturer: Mapped["User"] = relationship("User", back_populates="owned_classrooms")
     memberships: Mapped[List["ClassroomMembership"]] = relationship(
         "ClassroomMembership",
+        back_populates="classroom",
+        cascade="all, delete-orphan",
+    )
+    subjects: Mapped[List["Subject"]] = relationship(
+        "Subject",
         back_populates="classroom",
         cascade="all, delete-orphan",
     )
@@ -66,4 +75,3 @@ class ClassroomMembership(Base):
 
     def __repr__(self) -> str:
         return f"<ClassroomMembership classroom_id={self.classroom_id} user_id={self.user_id}>"
-

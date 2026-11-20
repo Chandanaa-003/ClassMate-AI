@@ -7,6 +7,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.classroom import Classroom, ClassroomMembership
+    from app.models.subject import Subject
 
 
 class UserRole(str, enum.Enum):
@@ -48,6 +49,11 @@ class User(Base):
     classroom_memberships: Mapped[List["ClassroomMembership"]] = relationship(
         "ClassroomMembership",
         back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    created_subjects: Mapped[List["Subject"]] = relationship(
+        "Subject",
+        back_populates="creator",
         cascade="all, delete-orphan",
     )
 

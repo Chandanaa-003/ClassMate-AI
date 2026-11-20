@@ -6,6 +6,7 @@ import { Register } from './components/Register';
 import { StudentDashboard } from './components/StudentDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { ClassroomDetail } from './components/ClassroomDetail';
+import { SubjectDetail } from './components/SubjectDetail';
 import { HealthCheck } from './components/HealthCheck';
 import { Sparkles } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<'auth' | 'dashboard' | 'health'>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -26,6 +28,7 @@ const AppContent: React.FC = () => {
 
   const handleSelectView = (view: 'auth' | 'dashboard' | 'health') => {
     setSelectedClassroomId(null);
+    setSelectedSubjectId(null);
     setCurrentView(view);
   };
 
@@ -55,15 +58,31 @@ const AppContent: React.FC = () => {
             </div>
             <HealthCheck />
           </div>
-        ) : user ? (
-          // Authenticated view: Classroom Detail or Role Dashboard
-          selectedClassroomId && token ? (
+        ) : user && token ? (
+          // Authenticated view routing: Subject Detail -> Classroom Detail -> Role Dashboard
+          selectedSubjectId ? (
+            <SubjectDetail
+              token={token}
+              subjectId={selectedSubjectId}
+              userRole={user.role}
+              onBackToClassroom={() => setSelectedSubjectId(null)}
+              onBackToDashboard={() => {
+                setSelectedSubjectId(null);
+                setSelectedClassroomId(null);
+              }}
+              onSubjectDeleted={() => setSelectedSubjectId(null)}
+            />
+          ) : selectedClassroomId ? (
             <ClassroomDetail
               token={token}
               classroomId={selectedClassroomId}
               userRole={user.role}
               onBack={() => setSelectedClassroomId(null)}
-              onLeftClassroom={() => setSelectedClassroomId(null)}
+              onSelectSubject={(subjectId) => setSelectedSubjectId(subjectId)}
+              onLeftClassroom={() => {
+                setSelectedClassroomId(null);
+                setSelectedSubjectId(null);
+              }}
             />
           ) : user.role === 'student' ? (
             <StudentDashboard
@@ -103,7 +122,7 @@ const AppContent: React.FC = () => {
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-auto">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
-          ClassMate AI &copy; 2026. Module 2: Classroom Management & Membership.
+          ClassMate AI &copy; 2026. Module 3: Subject Management & Syllabi Organization.
         </div>
       </footer>
     </div>

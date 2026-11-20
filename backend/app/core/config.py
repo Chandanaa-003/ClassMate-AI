@@ -1,5 +1,5 @@
 import json
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,6 +17,13 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+    # AI Configuration (Module 6: Transcription & Smart Notes)
+    AI_PROVIDER: str = "openai"
+    OPENAI_API_KEY: Optional[str] = None
+    WHISPER_MODEL: str = "whisper-1"
+    LLM_MODEL: str = "gpt-4o-mini"
+    GEMINI_API_KEY: Optional[str] = None
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

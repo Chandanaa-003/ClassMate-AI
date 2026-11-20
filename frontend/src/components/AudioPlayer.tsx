@@ -5,9 +5,17 @@ interface AudioPlayerProps {
   src: string;
   title: string;
   initialDuration?: number | null;
+  seekToTime?: number | null;
+  onTimeSeeked?: () => void;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, initialDuration }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({
+  src,
+  title,
+  initialDuration,
+  seekToTime,
+  onTimeSeeked,
+}) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -44,6 +52,19 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, initialDur
       audio.removeEventListener('error', onError);
     };
   }, [src]);
+
+  useEffect(() => {
+    if (seekToTime !== undefined && seekToTime !== null && audioRef.current) {
+      audioRef.current.currentTime = seekToTime;
+      setCurrentTime(seekToTime);
+      if (!isPlaying) {
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+      if (onTimeSeeked) {
+        onTimeSeeked();
+      }
+    }
+  }, [seekToTime]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;

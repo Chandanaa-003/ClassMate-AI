@@ -1,5 +1,6 @@
 """Main API router configuration."""
 from fastapi import APIRouter
+from app.api.routes.ai import router as ai_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.classroom import router as classroom_router
 from app.api.routes.doubt import router as doubt_router
@@ -14,6 +15,7 @@ api_router.include_router(classroom_router)
 api_router.include_router(subject_router)
 api_router.include_router(doubt_router)
 api_router.include_router(lecture_router)
+api_router.include_router(ai_router)
 
 __all__ = ["api_router"]
 

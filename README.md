@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, and **Module 5: Lecture Recording and Upload System**.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, and **Module 6: AI Transcription and Smart Notes**.
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, MediaRecorder browser audio capture, AuthContext state management.
-- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, path traversal defense, file type/size validation, and lecturer approval workflows.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 5 modules.
+- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, OpenAI Whisper / GPT-4o-mini SDK, Uvicorn.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, path traversal defense, file type/size validation, and background AI job isolation.
+- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 6 modules.
 
 ---
 
@@ -41,7 +41,15 @@ classmate_ai/
 │   │   │   ├── classroom.py      # Classroom & ClassroomMembership models
 │   │   │   ├── subject.py        # Subject model with classroom & creator relations
 │   │   │   ├── doubt.py          # Doubt, Answer, and Vote models
-│   │   │   └── lecture.py        # Lecture recording model with approval statuses
+│   │   │   ├── lecture.py        # Lecture recording model with approval statuses
+│   │   │   ├── transcript.py     # AI transcript model with timestamps & language
+│   │   │   └── smart_note.py     # 9-section structured smart notes model
+│   │   ├── services/             # Core business & AI service layer
+│   │   │   └── ai/
+│   │   │       ├── __init__.py
+│   │   │       ├── provider.py   # AI provider configuration & client factory
+│   │   │       ├── transcription.py # Whisper & Kannada/mixed transcription
+│   │   │       └── notes_generator.py # Grounded 9-section smart notes generator
 │   │   ├── schemas/              # Pydantic data validation schemas
 │   │   │   ├── __init__.py
 │   │   │   ├── health.py         # Health check response schema
@@ -49,7 +57,8 @@ classmate_ai/
 │   │   │   ├── classroom.py      # Classroom request/response schemas
 │   │   │   ├── subject.py        # Subject create, update, response schemas
 │   │   │   ├── doubt.py          # Doubt, Answer, Vote create & response schemas
-│   │   │   └── lecture.py        # Lecture upload, review, and response schemas
+│   │   │   ├── lecture.py        # Lecture upload, review, and response schemas
+│   │   │   └── ai.py             # Transcript, segment & smart note schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -61,6 +70,7 @@ classmate_ai/
 │   │           ├── subject.py    # Subject CRUD, duplicate checks, member access
 │   │           ├── doubt.py      # Anonymous doubts, answers, voting & acceptance
 │   │           ├── lecture.py    # Audio upload, streaming, review & deletion
+│   │           ├── ai.py         # Async transcription & smart notes endpoints
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
@@ -69,6 +79,7 @@ classmate_ai/
 │       ├── test_subject.py       # Subject CRUD, permissions, duplicates, access tests
 │       ├── test_doubt.py         # Anonymity masking, single vote, answers, acceptance
 │       ├── test_lecture.py       # Audio uploads, review workflow, privacy, streaming
+│       ├── test_ai.py            # AI transcription, Kannada/mixed, notes, edit, retry
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -99,7 +110,9 @@ classmate_ai/
         │   ├── RecordLectureModal.tsx # MediaRecorder audio recording with consent check
         │   ├── UploadLectureModal.tsx # Drag & drop audio uploader with validation
         │   ├── ReviewLectureModal.tsx # Lecturer audio review, approval & rejection modal
-        │   ├── LectureLibrary.tsx # Lecture library, review queue & student uploads
+        │   ├── LectureLibrary.tsx # Lecture library, study workspace & audio streaming
+        │   ├── TranscriptSection.tsx # Timestamped transcript, seek buttons & inline editor
+        │   ├── SmartNotesSection.tsx # 9-section structured notes & clipboard copier
         │   ├── DoubtCard.tsx     # Discussion question card with badges & counts
         │   ├── DoubtThread.tsx   # Complete discussion thread, replies & upvoting
         │   ├── AskDoubtModal.tsx # Anonymous/identified doubt question composer
@@ -112,13 +125,15 @@ classmate_ai/
         │   ├── classroom.ts      # Classroom management API client
         │   ├── subject.ts        # Subject management API client
         │   ├── doubt.ts          # Doubts, answers, voting & acceptance client
-        │   └── lecture.ts        # Audio upload, review & streaming client
+        │   ├── lecture.ts        # Audio upload, review & streaming client
+        │   └── ai.ts             # AI transcription & smart notes client
         └── types/                # TypeScript interface definitions
             ├── auth.ts           # User, Role, AuthResponse types
             ├── classroom.ts      # Classroom, Member, Payload types
             ├── subject.ts        # Subject, Create/Update Payload types
             ├── doubt.ts          # Doubt, Answer, Vote, Filter types
             ├── lecture.ts        # Lecture, Review, Status types
+            ├── ai.ts             # Transcript, Segment, SmartNote types
             └── health.ts         # Health API response types
 ```
 
@@ -206,6 +221,38 @@ classmate_ai/
 
 ---
 
+## 🤖 Module 6: AI Audio Transcription & Smart Notes
+
+### AI Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/lectures/{lecture_id}/transcribe` | Trigger asynchronous audio transcription (Whisper) | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/lectures/{lecture_id}/transcript` | Get transcript status, full text & timestamped segments | Yes | Classroom Member or Lecturer |
+| `PUT` | `/api/v1/lectures/{lecture_id}/transcript` | Edit and correct transcript text | Yes | Uploader or Classroom Lecturer |
+| `POST` | `/api/v1/lectures/{lecture_id}/generate-notes` | Generate grounded 9-section Smart Notes | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/lectures/{lecture_id}/notes` | Get structured study notes, markdown & sections | Yes | Classroom Member or Lecturer |
+
+### AI Service Architecture & Anti-Hallucination Features
+- **Configurable Provider (`backend/app/services/ai/`)**: Supports `OpenAI Whisper` (`whisper-1`) and `OpenAI GPT-4o-mini` with graceful fallback to offline grounded generation when API keys are not provided.
+- **Multilingual & Mixed-Speech Support**: Transcribes English, pure Kannada (`kn`), and Kannada-English mixed speech (`Namaskara students...`).
+- **Clickable Timestamp Seeking**: Transcripts provide structured segments (`start`, `end`, `text`). Clicking any timestamp (`[01:23]`) in the UI immediately seeks the audio player to that exact moment.
+- **Strict Grounding Guarantee**: Study notes are strictly grounded in the verified transcript. If the transcript is too short or lacks substantive material, the AI explicitly reports insufficient content instead of inventing topics.
+- **9-Section Structured Notes**:
+  1. Lecture Overview
+  2. Important Concepts
+  3. Topic-wise Explanations
+  4. Key Definitions
+  5. Important Points
+  6. Examples Mentioned in Lecture
+  7. Important Keywords
+  8. Quick Revision Summary
+  9. Possible Exam Questions
+- **One-Click Copy**: Students can copy the entire formatted markdown notes directly to their clipboard with instant feedback.
+- **Background Task Processing**: Non-blocking async workers (`BackgroundTasks`) manage long-running transcription and summarization jobs while clients poll status.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Run the Backend Server
@@ -220,8 +267,8 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### 2. Run Backend Tests
 
 ```powershell
-# Run all test suites across Modules 1 - 5
-$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_lecture.py; python backend/tests/test_health.py
+# Run all test suites across Modules 1 - 6
+$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_lecture.py; python backend/tests/test_ai.py; python backend/tests/test_health.py
 ```
 
 ### 3. Run the Frontend Development Server

@@ -6,7 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.smart_note import SmartNote
     from app.models.subject import Subject
+    from app.models.transcript import Transcript
     from app.models.user import User
 
 
@@ -50,6 +52,18 @@ class Lecture(Base):
     # Relationships
     subject: Mapped["Subject"] = relationship("Subject", back_populates="lectures")
     uploader: Mapped["User"] = relationship("User", back_populates="lectures")
+    transcript: Mapped[Optional["Transcript"]] = relationship(
+        "Transcript",
+        back_populates="lecture",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    smart_note: Mapped[Optional["SmartNote"]] = relationship(
+        "SmartNote",
+        back_populates="lecture",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Lecture id={self.id} title={self.title[:30]} status={self.approval_status}>"

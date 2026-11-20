@@ -6,6 +6,8 @@ import { AudioPlayer } from './AudioPlayer';
 import { RecordLectureModal } from './RecordLectureModal';
 import { UploadLectureModal } from './UploadLectureModal';
 import { ReviewLectureModal } from './ReviewLectureModal';
+import { TranscriptSection } from './TranscriptSection';
+import { SmartNotesSection } from './SmartNotesSection';
 import {
   Mic,
   Upload,
@@ -18,9 +20,12 @@ import {
   Trash2,
   Calendar,
   User,
-  Volume2,
   ShieldCheck,
   Radio,
+  FileText,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface LectureLibraryProps {
@@ -42,7 +47,10 @@ export const LectureLibrary: React.FC<LectureLibraryProps> = ({
   const [myLectures, setMyLectures] = useState<Lecture[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activePlayerId, setActivePlayerId] = useState<number | null>(null);
+  const [expandedLectureId, setExpandedLectureId] = useState<number | null>(null);
+  const [lectureSubTab, setLectureSubTab] = useState<Record<number, 'transcript' | 'notes'>>({});
+  const [seekTimes, setSeekTimes] = useState<Record<number, number | null>>({});
+  const [transcriptStatuses, setTranscriptStatuses] = useState<Record<number, string>>({});
 
   // Modals
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -87,8 +95,8 @@ export const LectureLibrary: React.FC<LectureLibraryProps> = ({
       await deleteLecture(token, lectureId);
       setBannerMessage({ type: 'success', text: `Lecture '${title}' deleted successfully.` });
       fetchLectures();
-      if (activePlayerId === lectureId) {
-        setActivePlayerId(null);
+      if (expandedLectureId === lectureId) {
+        setExpandedLectureId(null);
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -283,13 +291,16 @@ export const LectureLibrary: React.FC<LectureLibraryProps> = ({
       ) : (
         <div className="space-y-4">
           {filteredList.map((lecture) => {
-            const isPlaying = activePlayerId === lecture.id;
+            const isExpanded = expandedLectureId === lecture.id;
+            const currentSubTab = lectureSubTab[lecture.id] || 'transcript';
             const audioUrl = getLectureAudioStreamUrl(token, lecture.id);
 
             return (
               <div
                 key={lecture.id}
-                className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 hover:border-indigo-300 transition shadow-sm space-y-4"
+                className={`bg-white rounded-3xl p-5 sm:p-6 border transition shadow-sm space-y-4 ${
+                  isExpanded ? 'border-indigo-400 ring-2 ring-indigo-500/10' : 'border-slate-200/80 hover:border-indigo-300'
+                }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="space-y-1.5 flex-1">
@@ -360,24 +371,25 @@ export const LectureLibrary: React.FC<LectureLibraryProps> = ({
                       </button>
                     )}
 
-                    {/* Play/Listen Button */}
+                    {/* Study & Listen Button */}
                     <button
-                      onClick={() => setActivePlayerId(isPlaying ? null : lecture.id)}
+                      onClick={() => setExpandedLectureId(isExpanded ? null : lecture.id)}
                       className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer ${
-                        isPlaying
+                        isExpanded
                           ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
                           : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'
                       }`}
                     >
-                      <Volume2 className="w-3.5 h-3.5" />
-                      <span>{isPlaying ? 'Hide Player' : 'Listen'}</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{isExpanded ? 'Close Study' : 'Listen & Study'}</span>
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </button>
 
                     {/* Delete button if permitted */}
                     {lecture.can_delete && (
                       <button
                         onClick={() => handleDelete(lecture.id, lecture.title)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
                         title="Delete lecture"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -397,14 +409,69 @@ export const LectureLibrary: React.FC<LectureLibraryProps> = ({
                   </div>
                 )}
 
-                {/* Audio Player when opened */}
-                {isPlaying && (
-                  <div className="pt-2 animate-fadeIn">
+                {/* Expanded Study Workspace (Audio + Transcript + Smart Notes) */}
+                {isExpanded && (
+                  <div className="pt-3 border-t border-slate-100 space-y-5 animate-fadeIn">
+                    {/* Persistent Audio Player */}
                     <AudioPlayer
                       src={audioUrl}
                       title={lecture.title}
                       initialDuration={lecture.duration}
+                      seekToTime={seekTimes[lecture.id]}
+                      onTimeSeeked={() => setSeekTimes((prev) => ({ ...prev, [lecture.id]: null }))}
                     />
+
+                    {/* Study Navigation Pills */}
+                    <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                      <button
+                        onClick={() =>
+                          setLectureSubTab((prev) => ({ ...prev, [lecture.id]: 'transcript' }))
+                        }
+                        className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                          currentSubTab === 'transcript'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>AI Transcript & Timestamps</span>
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          setLectureSubTab((prev) => ({ ...prev, [lecture.id]: 'notes' }))
+                        }
+                        className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                          currentSubTab === 'notes'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Smart Notes (9 Sections)</span>
+                      </button>
+                    </div>
+
+                    {/* Active Sub-Tab View */}
+                    {currentSubTab === 'transcript' && (
+                      <TranscriptSection
+                        token={token}
+                        lectureId={lecture.id}
+                        canEdit={lecture.can_delete}
+                        onSeek={(time) => setSeekTimes((prev) => ({ ...prev, [lecture.id]: time }))}
+                        onStatusChange={(status) =>
+                          setTranscriptStatuses((prev) => ({ ...prev, [lecture.id]: status }))
+                        }
+                      />
+                    )}
+
+                    {currentSubTab === 'notes' && (
+                      <SmartNotesSection
+                        token={token}
+                        lectureId={lecture.id}
+                        transcriptStatus={(transcriptStatuses[lecture.id] || 'NOT_STARTED') as any}
+                      />
+                    )}
                   </div>
                 )}
               </div>

@@ -2,10 +2,11 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the complete full-stack foundation:
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons.
-- **Backend**: Python FastAPI, Pydantic v2, Uvicorn.
+This repository contains the complete full-stack foundation and **Module 1: Authentication & Role-Based Access Control (RBAC)**.
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, AuthContext state management.
+- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Uvicorn.
 - **Database**: SQLite with SQLAlchemy 2.0 ORM.
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer).
 - **Testing & Verification**: Automated health checks, SQLite connectivity checks, and pytest test suite.
 
 ---
@@ -19,60 +20,91 @@ classmate_ai/
 ├── backend/                      # Python FastAPI application
 │   ├── .env.example              # Environment variables template
 │   ├── .env                      # Local development environment settings
-│   ├── requirements.txt          # Python dependencies
+│   ├── requirements.txt          # Python dependencies (FastAPI, PyJWT, Bcrypt, etc.)
 │   ├── pytest.ini                # Pytest configuration
 │   ├── app/                      # Application source code
 │   │   ├── __init__.py
 │   │   ├── main.py               # FastAPI entry point, CORS, and lifecycle
 │   │   ├── core/
 │   │   │   ├── __init__.py
-│   │   │   └── config.py         # Settings & environment validation
+│   │   │   ├── config.py         # Settings & environment validation (JWT secret, DB URL)
+│   │   │   └── security.py       # Bcrypt hashing & PyJWT token creation/decoding
 │   │   ├── db/
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py           # SQLAlchemy declarative base
 │   │   │   └── session.py        # SQLite engine, sessions & connectivity check
 │   │   ├── models/               # SQLAlchemy ORM database models
-│   │   │   └── __init__.py
+│   │   │   ├── __init__.py
+│   │   │   └── user.py           # User model with Student & Lecturer roles
 │   │   ├── schemas/              # Pydantic data validation schemas
 │   │   │   ├── __init__.py
-│   │   │   └── health.py         # Health check response schema
+│   │   │   ├── health.py         # Health check response schema
+│   │   │   └── user.py           # UserCreate, UserLogin, UserResponse, Token schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
+│   │       ├── deps.py           # JWT token validation & role-based dependencies
 │   │       ├── router.py         # Main API router aggregator
 │   │       └── routes/
 │   │           ├── __init__.py
+│   │           ├── auth.py       # Registration, login, profile, and role dashboards
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
+│       ├── test_auth.py          # Registration, login, JWT & RBAC tests
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
     ├── index.html                # Single-page HTML shell
     ├── vite.config.ts            # Vite build configuration & API proxy
     ├── tsconfig.json             # TypeScript configuration
-    ├── tsconfig.node.json        # TypeScript configuration for Vite
     ├── tailwind.config.js        # Tailwind CSS design system configuration
     ├── postcss.config.js         # PostCSS configuration
     └── src/                      # Frontend source code
         ├── main.tsx              # React DOM mounting
-        ├── App.tsx               # Root component & layout
+        ├── App.tsx               # Root component & role-based view routing
         ├── index.css             # Tailwind CSS imports & global styles
+        ├── context/
+        │   └── AuthContext.tsx   # Global authentication state & session persistence
         ├── components/           # Reusable UI components
-        │   ├── Header.tsx        # Top navigation & platform header
+        │   ├── Header.tsx        # Top navigation, role badges & logout
+        │   ├── Login.tsx         # Attractive login form with client validation
+        │   ├── Register.tsx      # Registration form with role picker (Student/Lecturer)
+        │   ├── StudentDashboard.tsx # Student workspace & features
+        │   ├── LecturerDashboard.tsx# Faculty portal & features
         │   └── HealthCheck.tsx   # Live API & SQLite status dashboard
         ├── services/             # Backend API communication clients
-        │   └── api.ts            # Health check & API fetchers
+        │   ├── api.ts            # Health check & API fetchers
+        │   └── auth.ts           # Authentication & dashboard API calls
         └── types/                # TypeScript interface definitions
+            ├── auth.ts           # User, Role, AuthResponse, Payload types
             └── health.ts         # Health API response types
 ```
 
 ---
 
+## 🔐 Module 1: Authentication & Role-Based Access Control
+
+### Supported Roles
+- **Student (`student`)**: Access study materials, AI lecture summaries, interactive tutor chats, and practice quizzes.
+- **Lecturer (`lecturer`)**: Manage course syllabi, lecture slides, automated AI quiz generators, and cohort analytics.
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description | Protected | Required Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/auth/register` | Register new user, hashes password, returns JWT | No | None |
+| `POST` | `/api/v1/auth/login` | Authenticate credentials and return JWT | No | None |
+| `GET` | `/api/v1/auth/me` | Retrieve profile of authenticated user | Yes | Any valid user |
+| `GET` | `/api/v1/auth/student/dashboard` | Student dashboard data & permissions | Yes | `student` |
+| `GET` | `/api/v1/auth/lecturer/dashboard` | Lecturer dashboard data & permissions | Yes | `lecturer` |
+| `GET` | `/health` | System & SQLite database connectivity check | No | None |
+
+---
+
 ## 📋 Prerequisites
 
-- **Node.js**: `v18.0.0` or higher (verified with `v26.13.0`)
-- **npm**: `v9.0.0` or higher (verified with `v11.20.0`)
-- **Python**: `3.10` or higher (verified with `Python 3.10.9`)
+- **Node.js**: `v18.0.0` or higher
+- **Python**: `3.10` or higher
 - **Git**
 
 ---
@@ -86,116 +118,53 @@ classmate_ai/
    cd backend
    ```
 
-2. Create and activate a Python virtual environment:
-   - **Windows (PowerShell)**:
-     ```powershell
-     python -m venv .venv
-     .\.venv\Scripts\Activate.ps1
-     ```
-   - **macOS / Linux**:
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-
-3. Install required dependencies:
-   ```bash
-   pip install -r requirements.txt
+2. Activate Python virtual environment:
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
    ```
 
-4. Configure environment settings:
-   Ensure `.env` exists (copied from `.env.example`):
+3. Run the backend development server:
    ```bash
-   # Windows PowerShell
-   Copy-Item .env.example .env
-   ```
-
-5. Run the backend development server:
-   ```bash
-   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+   python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
    ```
    - API Root: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-   - Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
    - Interactive Swagger API Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-   - ReDoc API Docs: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+   - Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+
+4. Run Backend Tests:
+   ```bash
+   # Run authentication & RBAC tests
+   $env:PYTHONPATH="backend"; python backend/tests/test_auth.py
+
+   # Run health check tests
+   $env:PYTHONPATH="backend"; python backend/tests/test_health.py
+   ```
 
 ---
 
 ### 2. Frontend Setup (React + Vite + Tailwind)
 
-1. Open a new terminal and navigate to the `frontend` folder:
+1. Navigate to the `frontend` folder:
    ```bash
    cd frontend
    ```
 
-2. Install npm dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
+2. Run the development server:
    ```bash
    npm run dev
    ```
    - Web App URL: [http://localhost:5173/](http://localhost:5173/)
 
-4. Build for production:
+3. Build for production:
    ```bash
    npm run build
    ```
 
 ---
 
-## 🩺 Health Check & Diagnostics
-
-The backend includes a health-check API endpoint that verifies:
-1. HTTP service availability.
-2. SQLite database connectivity using an active SQL query (`SELECT 1`).
-3. Application environment, version, and server timestamp.
-
-### Endpoint: `GET /health` (or `GET /api/v1/health`)
-
-#### Sample Response:
-```json
-{
-  "status": "healthy",
-  "project_name": "ClassMate AI",
-  "environment": "development",
-  "database": "connected",
-  "version": "0.1.0",
-  "timestamp": "2026-11-20T08:24:00.000000"
-}
-```
-
-### Running Backend Tests
-From the project root:
-```bash
-# Set PYTHONPATH and execute test runner
-$env:PYTHONPATH="backend"; python backend/tests/test_health.py
-```
-
----
-
-## 🗄️ Database (SQLite) Configuration
-
-The SQLite database is automatically initialized at startup using SQLAlchemy 2.0.
-- **Default Database Location**: `backend/classmate.db`
-- **Configurable Connection String**: Defined in `backend/.env` via `DATABASE_URL`:
-  ```ini
-  DATABASE_URL=sqlite:///./classmate.db
-  ```
-- **Thread Safety**: SQLite is configured with `check_same_thread=False` to safely handle asynchronous FastAPI workers.
-
----
-
 ## 🔒 Security Best Practices
 
-- Secret files (`.env`, `.env.local`) and database binaries (`*.db`, `*.sqlite3`) are ignored in `.gitignore`.
-- Never commit API keys or production secrets to source control.
-- CORS origins are restricted to configured client hosts via `BACKEND_CORS_ORIGINS`.
-
----
-
-## 📄 License
-This project is licensed under the MIT License.
-
+- **Bcrypt Hashing**: Passwords are never stored in plain-text. They are hashed using `bcrypt` with automated salt generation.
+- **Signed JWT Tokens**: Tokens are signed with `HS256` and verified on every protected route.
+- **Role Enforcement**: Forbidden attempts (e.g., student trying to access `/lecturer/dashboard`) return HTTP 403 Forbidden.
+- **Environment Secrets**: Sensitive keys are kept in `.env` and excluded via `.gitignore`.

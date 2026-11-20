@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, and **Module 3: Subject Management & Syllabi Organization**.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, and **Module 4: Anonymous Doubt Discussion**.
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, AuthContext state management.
 - **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, single-vote integrity.
+- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 4 modules.
 
 ---
 
@@ -38,13 +38,15 @@ classmate_ai/
 │   │   │   ├── __init__.py
 │   │   │   ├── user.py           # User model with Student & Lecturer roles
 │   │   │   ├── classroom.py      # Classroom & ClassroomMembership models
-│   │   │   └── subject.py        # Subject model with classroom & creator relations
+│   │   │   ├── subject.py        # Subject model with classroom & creator relations
+│   │   │   └── doubt.py          # Doubt, Answer, and Vote models
 │   │   ├── schemas/              # Pydantic data validation schemas
 │   │   │   ├── __init__.py
 │   │   │   ├── health.py         # Health check response schema
 │   │   │   ├── user.py           # User authentication schemas
 │   │   │   ├── classroom.py      # Classroom request/response schemas
-│   │   │   └── subject.py        # Subject create, update, response schemas
+│   │   │   ├── subject.py        # Subject create, update, response schemas
+│   │   │   └── doubt.py          # Doubt, Answer, Vote create & response schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -54,12 +56,14 @@ classmate_ai/
 │   │           ├── auth.py       # Registration, login, profile, and role dashboards
 │   │           ├── classroom.py  # Classroom creation, joining, roster, and leaving
 │   │           ├── subject.py    # Subject CRUD, duplicate checks, member access
+│   │           ├── doubt.py      # Anonymous doubts, answers, voting & acceptance
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
 │       ├── test_auth.py          # Registration, login, JWT & RBAC tests
 │       ├── test_classroom.py     # Classroom lifecycle, joining, isolation, leave tests
 │       ├── test_subject.py       # Subject CRUD, permissions, duplicates, access tests
+│       ├── test_doubt.py         # Anonymity masking, single vote, answers, acceptance
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -85,7 +89,10 @@ classmate_ai/
         │   ├── ClassroomDetail.tsx # Classroom workspace, subjects & member roster
         │   ├── SubjectCard.tsx   # Responsive subject card with edit/delete actions
         │   ├── SubjectModal.tsx  # Create/edit subject dialog
-        │   ├── SubjectDetail.tsx # Subject workspace & study materials space
+        │   ├── SubjectDetail.tsx # Subject workspace, tabs & doubt board
+        │   ├── DoubtCard.tsx     # Discussion question card with badges & counts
+        │   ├── DoubtThread.tsx   # Complete discussion thread, replies & upvoting
+        │   ├── AskDoubtModal.tsx # Anonymous/identified doubt question composer
         │   ├── CreateClassroomModal.tsx # Lecturer classroom creation dialog
         │   ├── JoinClassroomModal.tsx   # Student join classroom dialog
         │   └── HealthCheck.tsx   # Live API & SQLite status dashboard
@@ -93,11 +100,13 @@ classmate_ai/
         │   ├── api.ts            # Health check fetcher
         │   ├── auth.ts           # Authentication API client
         │   ├── classroom.ts      # Classroom management API client
-        │   └── subject.ts        # Subject management API client
+        │   ├── subject.ts        # Subject management API client
+        │   └── doubt.ts          # Doubts, answers, voting & acceptance client
         └── types/                # TypeScript interface definitions
             ├── auth.ts           # User, Role, AuthResponse types
             ├── classroom.ts      # Classroom, Member, Payload types
             ├── subject.ts        # Subject, Create/Update Payload types
+            ├── doubt.ts          # Doubt, Answer, Vote, Filter types
             └── health.ts         # Health API response types
 ```
 
@@ -125,6 +134,35 @@ classmate_ai/
 
 ---
 
+## 💬 Module 4: Anonymous Doubt Discussion
+
+### Doubt & Answer Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/subjects/{subject_id}/doubts` | Post a doubt (anonymous or identified) | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/subjects/{subject_id}/doubts` | List doubts with search & filter | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/doubts/{doubt_id}` | Retrieve doubt thread & all answers | Yes | Classroom Member or Lecturer |
+| `POST` | `/api/v1/doubts/{doubt_id}/answers` | Post an answer to a doubt | Yes | Classroom Member or Lecturer |
+| `POST` | `/api/v1/answers/{answer_id}/vote` | Upvote an answer (once per user) | Yes | Classroom Member or Lecturer |
+| `POST` | `/api/v1/answers/{answer_id}/accept` | Accept an answer as verified solution | Yes | Question Author Only |
+| `DELETE` | `/api/v1/doubts/{doubt_id}` | Moderate or delete a doubt | Yes | Author or Classroom Lecturer |
+
+### Security & Privacy Protections
+- **Zero-Leak Anonymity**: When `is_anonymous=true`, the author's identity is masked as `"Anonymous Student"` or `"Anonymous Lecturer"`. The database stores the real `author_id` privately for permissions, but it is strictly omitted from public API serialization.
+- **Dynamic Author Capability**: The API dynamically outputs `is_author: bool` based on the caller's JWT token, so authors can manage their questions or accept answers without revealing their identity to peers.
+- **Vote Integrity**: Answers feature single-vote upvoting backed by a unique database constraint (`user_id`, `answer_id`). Repeat attempts return **400 Bad Request**.
+- **Accepted Answer Exclusivity**: Only the question author can accept an answer (**403 Forbidden** for anyone else). Marking an answer as accepted immediately marks the doubt as `RESOLVED`.
+- **Discussion Moderation**: Lecturers who own the classroom can delete questions for moderation; authors can also delete their own doubts (**403 Forbidden** for other members).
+- **Membership Boundary**: Only students and lecturers with active membership in the parent classroom can view or participate in doubts (**403 Forbidden** for outsiders).
+
+### Frontend User Interface
+- **Anonymous Posting by Default**: "Ask Anonymously" toggle is checked by default in the Ask Doubt modal to encourage participation without hesitation.
+- **Rich Discussion Board**: Features filter tabs (**Latest**, **Unanswered**, **Most Popular**, **Resolved**) and keyword search across question titles and descriptions.
+- **Full Thread View**: Displays answer rosters with accepted solution banners, upvote counts, interactive upvote buttons, and answer composer with optional anonymity.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Run the Backend Server
@@ -139,8 +177,8 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### 2. Run Backend Tests
 
 ```powershell
-# Run all test suites
-$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_health.py
+# Run all test suites across Modules 1 - 4
+$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_health.py
 ```
 
 ### 3. Run the Frontend Development Server

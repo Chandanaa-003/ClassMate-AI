@@ -7,6 +7,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.classroom import Classroom, ClassroomMembership
+    from app.models.doubt import Answer, Doubt, Vote
     from app.models.subject import Subject
 
 
@@ -54,6 +55,21 @@ class User(Base):
     created_subjects: Mapped[List["Subject"]] = relationship(
         "Subject",
         back_populates="creator",
+        cascade="all, delete-orphan",
+    )
+    doubts: Mapped[List["Doubt"]] = relationship(
+        "Doubt",
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
+    answers: Mapped[List["Answer"]] = relationship(
+        "Answer",
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
+    votes: Mapped[List["Vote"]] = relationship(
+        "Vote",
+        back_populates="user",
         cascade="all, delete-orphan",
     )
 

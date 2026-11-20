@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.classroom import Classroom
+    from app.models.doubt import Doubt
     from app.models.user import User
 
 
@@ -42,7 +43,11 @@ class Subject(Base):
     # Relationships
     classroom: Mapped["Classroom"] = relationship("Classroom", back_populates="subjects")
     creator: Mapped["User"] = relationship("User", back_populates="created_subjects")
+    doubts: Mapped[List["Doubt"]] = relationship(
+        "Doubt",
+        back_populates="subject",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Subject id={self.id} name={self.name} classroom_id={self.classroom_id}>"
-

@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { deleteSubject, getSubject } from '../services/subject';
+import { getSubjectDoubts } from '../services/doubt';
 import { Subject } from '../types/subject';
+import { Doubt } from '../types/doubt';
 import { UserRole } from '../types/auth';
 import { Breadcrumbs } from './Breadcrumbs';
 import { SubjectModal } from './SubjectModal';
+import { AskDoubtModal } from './AskDoubtModal';
+import { DoubtCard } from './DoubtCard';
+import { DoubtThread } from './DoubtThread';
 import {
   BookOpen,
   Calendar,
@@ -11,9 +16,11 @@ import {
   Edit2,
   Trash2,
   AlertCircle,
-  FileText,
-  Sparkles,
+  HelpCircle,
+  Plus,
+  Search,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 
 interface SubjectDetailProps {
@@ -38,6 +45,15 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Doubts state
+  const [doubts, setDoubts] = useState<Doubt[]>([]);
+  const [loadingDoubts, setLoadingDoubts] = useState(true);
+  const [doubtSearch, setDoubtSearch] = useState('');
+  const [doubtFilter, setDoubtFilter] = useState<'latest' | 'unanswered' | 'popular' | 'resolved'>('latest');
+  const [isAskModalOpen, setIsAskModalOpen] = useState(false);
+  const [selectedDoubtId, setSelectedDoubtId] = useState<number | null>(null);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
   const fetchSubject = async () => {
     setLoading(true);
     setError(null);
@@ -55,14 +71,32 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
     }
   };
 
+  const fetchDoubts = async () => {
+    setLoadingDoubts(true);
+    try {
+      const list = await getSubjectDoubts(token, subjectId, doubtSearch, doubtFilter);
+      setDoubts(list);
+    } catch {
+      // handled gracefully
+    } finally {
+      setLoadingDoubts(false);
+    }
+  };
+
   useEffect(() => {
     fetchSubject();
   }, [subjectId, token]);
 
+  useEffect(() => {
+    if (!selectedDoubtId) {
+      fetchDoubts();
+    }
+  }, [subjectId, token, doubtFilter, doubtSearch, selectedDoubtId]);
+
   const handleDelete = async () => {
     if (!subject) return;
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete '${subject.name}'? All study materials associated with it will be removed.`
+      `Are you sure you want to delete '${subject.name}'? All doubts and materials associated with it will be removed.`
     );
     if (!confirmDelete) return;
 
@@ -82,6 +116,12 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
       }
       setDeleting(false);
     }
+  };
+
+  const handleDoubtCreated = (newDoubt: Doubt) => {
+    setDoubts((prev) => [newDoubt, ...prev]);
+    setSuccessBanner('Your question has been posted to the discussion board!');
+    setTimeout(() => setSuccessBanner(null), 4000);
   };
 
   if (loading) {
@@ -154,6 +194,13 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
         </div>
       </div>
 
+      {successBanner && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center space-x-3 text-xs font-medium animate-fade-in">
+          <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      )}
+
       {/* Subject Header Hero */}
       <div className="bg-gradient-to-br from-violet-900 via-indigo-900 to-slate-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl shadow-violet-950/10">
         <div className="space-y-4 max-w-3xl">
@@ -183,7 +230,7 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
           <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-violet-300">
             <span className="flex items-center space-x-1.5">
               <User className="w-4 h-4 text-violet-400" />
-              <span>Created by <strong className="text-white font-medium">{subject.creator_name}</strong></span>
+              <span>Instructor: <strong className="text-white font-medium">{subject.creator_name}</strong></span>
             </span>
             <span className="flex items-center space-x-1.5">
               <Calendar className="w-4 h-4 text-violet-400" />
@@ -193,22 +240,132 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
         </div>
       </div>
 
-      {/* Lectures & Study Materials Placeholder (Module 4 Ready) */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-8 text-center space-y-3">
-        <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl w-fit mx-auto">
-          <FileText className="w-6 h-6" />
-        </div>
-        <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Module 3: Subject Configured</span>
-        </div>
-        <h3 className="text-base font-bold text-slate-800">Lectures & Study Materials</h3>
-        <p className="text-xs text-slate-500 max-w-md mx-auto">
-          This subject is now ready to receive lecture slide decks, syllabus outlines, AI summaries, and automated question banks in Module 4.
-        </p>
-      </div>
+      {/* Module 4: Anonymous Doubt Discussion Board */}
+      {selectedDoubtId ? (
+        <DoubtThread
+          token={token}
+          doubtId={selectedDoubtId}
+          onBack={() => setSelectedDoubtId(null)}
+          onDoubtDeleted={() => {
+            setSelectedDoubtId(null);
+            fetchDoubts();
+          }}
+        />
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
+                <HelpCircle className="w-5 h-5 text-amber-500" />
+                <span>Anonymous Doubt Discussions</span>
+              </h2>
+              <p className="text-xs text-slate-500">
+                Ask questions anonymously without fear of judgment. Classmates and lecturers can answer.
+              </p>
+            </div>
 
-      {/* Edit Modal */}
+            <button
+              onClick={() => setIsAskModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ask a Doubt</span>
+            </button>
+          </div>
+
+          {/* Search bar & Filter Tabs */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="relative flex-1 max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <Search className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                value={doubtSearch}
+                onChange={(e) => setDoubtSearch(e.target.value)}
+                placeholder="Search questions by keyword..."
+                className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition"
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+              {(
+                [
+                  { id: 'latest', label: 'Latest' },
+                  { id: 'unanswered', label: 'Unanswered' },
+                  { id: 'popular', label: 'Most Popular' },
+                  { id: 'resolved', label: 'Resolved' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setDoubtFilter(tab.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    doubtFilter === tab.id
+                      ? 'bg-white text-slate-800 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Questions List */}
+          {loadingDoubts ? (
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
+              <div className="w-6 h-6 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="mt-2 text-xs text-slate-400">Loading questions...</p>
+            </div>
+          ) : doubts.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 border border-dashed border-slate-300 text-center space-y-3">
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl w-fit mx-auto">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">
+                {doubtSearch ? 'No Questions Match Your Search' : 'No Doubts Asked Yet'}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {doubtSearch
+                  ? `No questions match '${doubtSearch}'. Try adjusting your search keywords.`
+                  : 'Have a question about this subject? Click below to ask your classmates and lecturers anonymously.'}
+              </p>
+              <button
+                onClick={() => setIsAskModalOpen(true)}
+                className="mt-2 inline-flex items-center space-x-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Ask the First Doubt</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {doubts.map((d) => (
+                <DoubtCard
+                  key={d.id}
+                  doubt={d}
+                  onSelect={(id) => setSelectedDoubtId(id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ask Doubt Modal */}
+      {isAskModalOpen && (
+        <AskDoubtModal
+          token={token}
+          subjectId={subject.id}
+          isOpen={isAskModalOpen}
+          onClose={() => setIsAskModalOpen(false)}
+          onDoubtCreated={handleDoubtCreated}
+        />
+      )}
+
+      {/* Edit Subject Modal */}
       {isEditModalOpen && (
         <SubjectModal
           token={token}
@@ -225,4 +382,3 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
     </div>
   );
 };
-

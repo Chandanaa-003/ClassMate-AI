@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the complete full-stack foundation and **Module 1: Authentication & Role-Based Access Control (RBAC)**.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, and **Module 2: Classroom Management & Membership**.
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, AuthContext state management.
 - **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM.
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer).
-- **Testing & Verification**: Automated health checks, SQLite connectivity checks, and pytest test suite.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom isolation.
+- **Testing & Verification**: Comprehensive test suites for authentication, classroom lifecycles, and system health checks.
 
 ---
 
@@ -20,26 +20,29 @@ classmate_ai/
 ├── backend/                      # Python FastAPI application
 │   ├── .env.example              # Environment variables template
 │   ├── .env                      # Local development environment settings
-│   ├── requirements.txt          # Python dependencies (FastAPI, PyJWT, Bcrypt, etc.)
+│   ├── requirements.txt          # Python dependencies
 │   ├── pytest.ini                # Pytest configuration
 │   ├── app/                      # Application source code
 │   │   ├── __init__.py
 │   │   ├── main.py               # FastAPI entry point, CORS, and lifecycle
 │   │   ├── core/
 │   │   │   ├── __init__.py
-│   │   │   ├── config.py         # Settings & environment validation (JWT secret, DB URL)
-│   │   │   └── security.py       # Bcrypt hashing & PyJWT token creation/decoding
+│   │   │   ├── config.py         # Settings & environment validation
+│   │   │   ├── codes.py          # Unique join code generator (CM-XXXX)
+│   │   │   └── security.py       # Bcrypt hashing & PyJWT token utilities
 │   │   ├── db/
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py           # SQLAlchemy declarative base
 │   │   │   └── session.py        # SQLite engine, sessions & connectivity check
 │   │   ├── models/               # SQLAlchemy ORM database models
 │   │   │   ├── __init__.py
-│   │   │   └── user.py           # User model with Student & Lecturer roles
+│   │   │   ├── user.py           # User model with Student & Lecturer roles
+│   │   │   └── classroom.py      # Classroom & ClassroomMembership models
 │   │   ├── schemas/              # Pydantic data validation schemas
 │   │   │   ├── __init__.py
 │   │   │   ├── health.py         # Health check response schema
-│   │   │   └── user.py           # UserCreate, UserLogin, UserResponse, Token schemas
+│   │   │   ├── user.py           # User authentication schemas
+│   │   │   └── classroom.py      # Classroom request/response schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -47,10 +50,12 @@ classmate_ai/
 │   │       └── routes/
 │   │           ├── __init__.py
 │   │           ├── auth.py       # Registration, login, profile, and role dashboards
+│   │           ├── classroom.py  # Classroom creation, joining, roster, and leaving
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
 │       ├── test_auth.py          # Registration, login, JWT & RBAC tests
+│       ├── test_classroom.py     # Classroom lifecycle, joining, isolation, leave tests
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -67,104 +72,76 @@ classmate_ai/
         │   └── AuthContext.tsx   # Global authentication state & session persistence
         ├── components/           # Reusable UI components
         │   ├── Header.tsx        # Top navigation, role badges & logout
-        │   ├── Login.tsx         # Attractive login form with client validation
-        │   ├── Register.tsx      # Registration form with role picker (Student/Lecturer)
-        │   ├── StudentDashboard.tsx # Student workspace & features
-        │   ├── LecturerDashboard.tsx# Faculty portal & features
+        │   ├── Login.tsx         # Login form with validation & demo credentials
+        │   ├── Register.tsx      # Registration form with role picker
+        │   ├── StudentDashboard.tsx # Student workspace & enrolled classrooms
+        │   ├── LecturerDashboard.tsx# Lecturer faculty portal & teaching classrooms
+        │   ├── ClassroomCard.tsx # Reusable classroom card with copy code trigger
+        │   ├── ClassroomDetail.tsx # Full classroom workspace & member roster
+        │   ├── CreateClassroomModal.tsx # Lecturer classroom creation dialog
+        │   ├── JoinClassroomModal.tsx   # Student join classroom dialog
         │   └── HealthCheck.tsx   # Live API & SQLite status dashboard
         ├── services/             # Backend API communication clients
-        │   ├── api.ts            # Health check & API fetchers
-        │   └── auth.ts           # Authentication & dashboard API calls
+        │   ├── api.ts            # Health check fetcher
+        │   ├── auth.ts           # Authentication API client
+        │   └── classroom.ts      # Classroom management API client
         └── types/                # TypeScript interface definitions
-            ├── auth.ts           # User, Role, AuthResponse, Payload types
+            ├── auth.ts           # User, Role, AuthResponse types
+            ├── classroom.ts      # Classroom, Member, Payload types
             └── health.ts         # Health API response types
 ```
 
 ---
 
-## 🔐 Module 1: Authentication & Role-Based Access Control
+## 🏫 Module 2: Classroom Management & Membership
 
-### Supported Roles
-- **Student (`student`)**: Access study materials, AI lecture summaries, interactive tutor chats, and practice quizzes.
-- **Lecturer (`lecturer`)**: Manage course syllabi, lecture slides, automated AI quiz generators, and cohort analytics.
+### Classroom Endpoints
 
-### Authentication Endpoints
-
-| Method | Endpoint | Description | Protected | Required Role |
+| Method | Endpoint | Description | Protected | Allowed Role |
 | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/api/v1/auth/register` | Register new user, hashes password, returns JWT | No | None |
-| `POST` | `/api/v1/auth/login` | Authenticate credentials and return JWT | No | None |
-| `GET` | `/api/v1/auth/me` | Retrieve profile of authenticated user | Yes | Any valid user |
-| `GET` | `/api/v1/auth/student/dashboard` | Student dashboard data & permissions | Yes | `student` |
-| `GET` | `/api/v1/auth/lecturer/dashboard` | Lecturer dashboard data & permissions | Yes | `lecturer` |
-| `GET` | `/health` | System & SQLite database connectivity check | No | None |
+| `POST` | `/api/v1/classrooms` | Create classroom with auto-generated join code | Yes | `lecturer` |
+| `POST` | `/api/v1/classrooms/join` | Join classroom using code | Yes | `student` / authenticated |
+| `GET` | `/api/v1/classrooms` | List classrooms (created for lecturers, joined for students) | Yes | Authenticated |
+| `GET` | `/api/v1/classrooms/{id}` | Classroom details, stats & member roster | Yes | Enrolled Member / Owner |
+| `GET` | `/api/v1/classrooms/{id}/members` | Member roster of students | Yes | Enrolled Member / Owner |
+| `DELETE` | `/api/v1/classrooms/{id}/leave` | Leave a classroom | Yes | `student` member |
 
----
-
-## 📋 Prerequisites
-
-- **Node.js**: `v18.0.0` or higher
-- **Python**: `3.10` or higher
-- **Git**
+### Security & Data Isolation
+- **Role Validation**: Only lecturers can create classrooms (`POST /api/v1/classrooms` returns `403 Forbidden` if invoked by a student).
+- **Membership Isolation**: Accessing `/classrooms/{id}` or `/classrooms/{id}/members` validates that the user is either the classroom owner or an enrolled member. Non-members receive `403 Forbidden`.
+- **Duplicate Prevention**: Database unique constraint `(classroom_id, user_id)` and endpoint checks prevent a student from joining the same classroom twice (`400 Bad Request`).
+- **Owner Protection**: Lecturers cannot leave their own classrooms (`400 Bad Request`).
+- **Identity Integrity**: User IDs are always derived from the authenticated JWT token, never trusted from frontend request bodies.
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### 1. Backend Setup (FastAPI & SQLite)
+### 1. Backend Setup & Run
 
-1. Open a terminal and navigate to the `backend` folder:
-   ```bash
-   cd backend
-   ```
+```powershell
+cd backend
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+- API Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-2. Activate Python virtual environment:
-   ```powershell
-   .\.venv\Scripts\Activate.ps1
-   ```
+### 2. Run Backend Tests
 
-3. Run the backend development server:
-   ```bash
-   python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-   ```
-   - API Root: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-   - Interactive Swagger API Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-   - Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+```powershell
+# Run all test suites
+$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_health.py
+```
 
-4. Run Backend Tests:
-   ```bash
-   # Run authentication & RBAC tests
-   $env:PYTHONPATH="backend"; python backend/tests/test_auth.py
+### 3. Frontend Setup & Run
 
-   # Run health check tests
-   $env:PYTHONPATH="backend"; python backend/tests/test_health.py
-   ```
+```powershell
+cd frontend
+npm run dev
+```
+- Web Application: [http://localhost:5173](http://localhost:5173)
 
 ---
 
-### 2. Frontend Setup (React + Vite + Tailwind)
-
-1. Navigate to the `frontend` folder:
-   ```bash
-   cd frontend
-   ```
-
-2. Run the development server:
-   ```bash
-   npm run dev
-   ```
-   - Web App URL: [http://localhost:5173/](http://localhost:5173/)
-
-3. Build for production:
-   ```bash
-   npm run build
-   ```
-
----
-
-## 🔒 Security Best Practices
-
-- **Bcrypt Hashing**: Passwords are never stored in plain-text. They are hashed using `bcrypt` with automated salt generation.
-- **Signed JWT Tokens**: Tokens are signed with `HS256` and verified on every protected route.
-- **Role Enforcement**: Forbidden attempts (e.g., student trying to access `/lecturer/dashboard`) return HTTP 403 Forbidden.
-- **Environment Secrets**: Sensitive keys are kept in `.env` and excluded via `.gitignore`.
+## 📄 License
+MIT License

@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getStudentDashboard } from '../services/auth';
+import { getClassrooms } from '../services/classroom';
 import { DashboardResponse } from '../types/auth';
+import { Classroom } from '../types/classroom';
+import { ClassroomCard } from './ClassroomCard';
+import { JoinClassroomModal } from './JoinClassroomModal';
 import {
   GraduationCap,
   BookOpen,
@@ -11,13 +15,35 @@ import {
   ShieldCheck,
   Sparkles,
   CheckCircle2,
+  Plus,
 } from 'lucide-react';
 
-export const StudentDashboard: React.FC = () => {
+interface StudentDashboardProps {
+  onSelectClassroom: (classroomId: number) => void;
+}
+
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onSelectClassroom }) => {
   const { user, token, logout } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingClassrooms, setLoadingClassrooms] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState<boolean>(false);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const fetchJoinedClassrooms = async () => {
+    if (!token) return;
+    setLoadingClassrooms(true);
+    try {
+      const list = await getClassrooms(token);
+      setClassrooms(list);
+    } catch {
+      // classrooms load failure handled gracefully
+    } finally {
+      setLoadingClassrooms(false);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -33,11 +59,19 @@ export const StudentDashboard: React.FC = () => {
         .finally(() => {
           setLoading(false);
         });
+
+      fetchJoinedClassrooms();
     }
   }, [token]);
 
+  const handleClassroomJoined = (newClass: Classroom) => {
+    setClassrooms((prev) => [newClass, ...prev]);
+    setSuccessBanner(`Successfully joined '${newClass.name}'!`);
+    setTimeout(() => setSuccessBanner(null), 4000);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Student Profile & Greeting Hero */}
       <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl shadow-indigo-950/10 relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -50,7 +84,7 @@ export const StudentDashboard: React.FC = () => {
               Welcome back, {user?.full_name}!
             </h2>
             <p className="text-blue-100 text-sm max-w-xl">
-              Ready to learn? Explore your courses, generate smart study summaries, and take AI-powered practice quizzes.
+              Access your enrolled classrooms, explore lecture notes, and take AI-generated practice quizzes.
             </p>
           </div>
 
@@ -59,15 +93,84 @@ export const StudentDashboard: React.FC = () => {
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
               <span className="font-mono">{user?.email}</span>
             </div>
-            <button
-              onClick={logout}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs font-semibold rounded-xl backdrop-blur-md transition cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setIsJoinModalOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Join Classroom</span>
+              </button>
+              <button
+                onClick={logout}
+                className="inline-flex items-center space-x-2 px-3 py-2 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs font-semibold rounded-xl backdrop-blur-md transition cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+
+      {successBanner && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center space-x-3 text-xs font-medium animate-fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      )}
+
+      {/* Module 2: Joined Classrooms Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">My Classrooms</h3>
+            <p className="text-xs text-slate-500">Course spaces you have joined</p>
+          </div>
+
+          <button
+            onClick={() => setIsJoinModalOpen(true)}
+            className="inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-xl transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Join with Code</span>
+          </button>
+        </div>
+
+        {loadingClassrooms ? (
+          <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center">
+            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-2 text-xs text-slate-400">Loading classrooms...</p>
+          </div>
+        ) : classrooms.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-dashed border-slate-300 text-center space-y-3">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mx-auto">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-800">No Classrooms Joined Yet</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              You haven't joined any classrooms yet. Ask your lecturer for their 6-character classroom code to join!
+            </p>
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="mt-2 inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Join Your First Class</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {classrooms.map((c) => (
+              <ClassroomCard
+                key={c.id}
+                classroom={c}
+                onSelect={onSelectClassroom}
+                showCode={false}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Backend Role-Protected Verification Status */}
@@ -108,7 +211,7 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Student Study Hub Quick Actions */}
+      {/* Student Study Hub Quick Modules */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mb-4">
@@ -117,7 +220,7 @@ export const StudentDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">Study Materials</h4>
           <p className="text-xs text-slate-500 mt-1">Access lecture notes, slides, and syllabus documents uploaded by your lecturers.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-600">Module Ready</span>
+            <span className="text-xs font-semibold text-blue-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">ClassMate Core</span>
           </div>
         </div>
@@ -129,7 +232,7 @@ export const StudentDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">Practice Quizzes</h4>
           <p className="text-xs text-slate-500 mt-1">Test your comprehension with automated multiple-choice and conceptual quizzes.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-indigo-600">Module Ready</span>
+            <span className="text-xs font-semibold text-indigo-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">AI Powered</span>
           </div>
         </div>
@@ -141,11 +244,21 @@ export const StudentDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">AI Tutor Chat</h4>
           <p className="text-xs text-slate-500 mt-1">Ask questions about your study topics and receive clear, step-by-step explanations.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-violet-600">Module Ready</span>
+            <span className="text-xs font-semibold text-violet-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">Interactive</span>
           </div>
         </div>
       </div>
+
+      {/* Join Modal */}
+      {token && (
+        <JoinClassroomModal
+          token={token}
+          isOpen={isJoinModalOpen}
+          onClose={() => setIsJoinModalOpen(false)}
+          onClassroomJoined={handleClassroomJoined}
+        />
+      )}
     </div>
   );
 };

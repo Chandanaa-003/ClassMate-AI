@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 import enum
+from typing import List, TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, Enum as SAEnum, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.classroom import Classroom, ClassroomMembership
 
 
 class UserRole(str, enum.Enum):
@@ -35,6 +39,17 @@ class User(Base):
         nullable=False,
     )
 
+    # Relationships
+    owned_classrooms: Mapped[List["Classroom"]] = relationship(
+        "Classroom",
+        back_populates="lecturer",
+        cascade="all, delete-orphan",
+    )
+    classroom_memberships: Mapped[List["ClassroomMembership"]] = relationship(
+        "ClassroomMembership",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} role={self.role}>"
-

@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getLecturerDashboard } from '../services/auth';
+import { getClassrooms } from '../services/classroom';
 import { DashboardResponse } from '../types/auth';
+import { Classroom } from '../types/classroom';
+import { ClassroomCard } from './ClassroomCard';
+import { CreateClassroomModal } from './CreateClassroomModal';
 import {
   BookOpenCheck,
   UploadCloud,
@@ -11,13 +15,35 @@ import {
   ShieldCheck,
   Sparkles,
   CheckCircle2,
+  Plus,
 } from 'lucide-react';
 
-export const LecturerDashboard: React.FC = () => {
+interface LecturerDashboardProps {
+  onSelectClassroom: (classroomId: number) => void;
+}
+
+export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onSelectClassroom }) => {
   const { user, token, logout } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingClassrooms, setLoadingClassrooms] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const fetchTeachingClassrooms = async () => {
+    if (!token) return;
+    setLoadingClassrooms(true);
+    try {
+      const list = await getClassrooms(token);
+      setClassrooms(list);
+    } catch {
+      // classrooms load failure handled gracefully
+    } finally {
+      setLoadingClassrooms(false);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -33,11 +59,19 @@ export const LecturerDashboard: React.FC = () => {
         .finally(() => {
           setLoading(false);
         });
+
+      fetchTeachingClassrooms();
     }
   }, [token]);
 
+  const handleClassroomCreated = (newClass: Classroom) => {
+    setClassrooms((prev) => [newClass, ...prev]);
+    setSuccessBanner(`Classroom '${newClass.name}' created with code: ${newClass.join_code}!`);
+    setTimeout(() => setSuccessBanner(null), 5000);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Lecturer Profile & Greeting Hero */}
       <div className="bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl shadow-purple-950/10 relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -50,7 +84,7 @@ export const LecturerDashboard: React.FC = () => {
               Welcome, Prof. {user?.full_name}!
             </h2>
             <p className="text-purple-100 text-sm max-w-xl">
-              Manage your courses, distribute lecture slides, generate automated quiz assessments, and review student engagement metrics.
+              Manage your classrooms, generate automated quiz assessments, and review student progress.
             </p>
           </div>
 
@@ -59,15 +93,84 @@ export const LecturerDashboard: React.FC = () => {
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
               <span className="font-mono">{user?.email}</span>
             </div>
-            <button
-              onClick={logout}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs font-semibold rounded-xl backdrop-blur-md transition cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Classroom</span>
+              </button>
+              <button
+                onClick={logout}
+                className="inline-flex items-center space-x-2 px-3 py-2 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs font-semibold rounded-xl backdrop-blur-md transition cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+
+      {successBanner && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center space-x-3 text-xs font-medium animate-fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      )}
+
+      {/* Module 2: My Teaching Classrooms Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">My Teaching Classrooms</h3>
+            <p className="text-xs text-slate-500">Course spaces you have created and manage</p>
+          </div>
+
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-purple-600 hover:bg-purple-50 border border-purple-200 rounded-xl transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Classroom</span>
+          </button>
+        </div>
+
+        {loadingClassrooms ? (
+          <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center">
+            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-2 text-xs text-slate-400">Loading classrooms...</p>
+          </div>
+        ) : classrooms.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-dashed border-slate-300 text-center space-y-3">
+            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl w-fit mx-auto">
+              <BookOpenCheck className="w-6 h-6" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-800">No Classrooms Created Yet</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Start by creating your first course classroom. An auto-generated join code will be provided for your students.
+            </p>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="mt-2 inline-flex items-center space-x-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl shadow-md transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create First Classroom</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {classrooms.map((c) => (
+              <ClassroomCard
+                key={c.id}
+                classroom={c}
+                onSelect={onSelectClassroom}
+                showCode={true}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Backend Role-Protected Verification Status */}
@@ -117,7 +220,7 @@ export const LecturerDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">Course Materials</h4>
           <p className="text-xs text-slate-500 mt-1">Upload lecture PDFs, slide decks, and syllabi for your student cohorts.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-600">Faculty Ready</span>
+            <span className="text-xs font-semibold text-purple-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">ClassMate Core</span>
           </div>
         </div>
@@ -129,7 +232,7 @@ export const LecturerDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">AI Quiz Generator</h4>
           <p className="text-xs text-slate-500 mt-1">Instantly generate high-quality quiz question banks from your uploaded lecture notes.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-indigo-600">Faculty Ready</span>
+            <span className="text-xs font-semibold text-indigo-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">AI Powered</span>
           </div>
         </div>
@@ -141,11 +244,21 @@ export const LecturerDashboard: React.FC = () => {
           <h4 className="text-base font-bold text-slate-800">Cohort Analytics</h4>
           <p className="text-xs text-slate-500 mt-1">Track which questions students struggle with and identify topics requiring revision.</p>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-600">Faculty Ready</span>
+            <span className="text-xs font-semibold text-emerald-600">Module 2 Active</span>
             <span className="text-xs text-slate-400">Analytics</span>
           </div>
         </div>
       </div>
+
+      {/* Create Modal */}
+      {token && (
+        <CreateClassroomModal
+          token={token}
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onClassroomCreated={handleClassroomCreated}
+        />
+      )}
     </div>
   );
 };

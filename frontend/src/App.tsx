@@ -5,13 +5,15 @@ import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { StudentDashboard } from './components/StudentDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
+import { ClassroomDetail } from './components/ClassroomDetail';
 import { HealthCheck } from './components/HealthCheck';
 import { Sparkles } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const [currentView, setCurrentView] = useState<'auth' | 'dashboard' | 'health'>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -22,11 +24,16 @@ const AppContent: React.FC = () => {
     );
   }
 
+  const handleSelectView = (view: 'auth' | 'dashboard' | 'health') => {
+    setSelectedClassroomId(null);
+    setCurrentView(view);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={handleSelectView}
         authMode={authMode}
         onSelectAuthMode={setAuthMode}
       />
@@ -49,11 +56,23 @@ const AppContent: React.FC = () => {
             <HealthCheck />
           </div>
         ) : user ? (
-          // Authenticated role-specific routing
-          user.role === 'student' ? (
-            <StudentDashboard />
+          // Authenticated view: Classroom Detail or Role Dashboard
+          selectedClassroomId && token ? (
+            <ClassroomDetail
+              token={token}
+              classroomId={selectedClassroomId}
+              userRole={user.role}
+              onBack={() => setSelectedClassroomId(null)}
+              onLeftClassroom={() => setSelectedClassroomId(null)}
+            />
+          ) : user.role === 'student' ? (
+            <StudentDashboard
+              onSelectClassroom={(id) => setSelectedClassroomId(id)}
+            />
           ) : (
-            <LecturerDashboard />
+            <LecturerDashboard
+              onSelectClassroom={(id) => setSelectedClassroomId(id)}
+            />
           )
         ) : (
           // Unauthenticated Auth Flows
@@ -62,7 +81,7 @@ const AppContent: React.FC = () => {
             <div className="text-center max-w-2xl mx-auto space-y-3">
               <div className="inline-flex items-center space-x-2 bg-indigo-50 border border-indigo-200/60 px-3 py-1 rounded-full text-indigo-700 text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Module 1: Authentication & RBAC</span>
+                <span>ClassMate AI Platform</span>
               </div>
               <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                 Empowering Students & Lecturers with AI
@@ -84,7 +103,7 @@ const AppContent: React.FC = () => {
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-auto">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
-          ClassMate AI &copy; 2026. Module 1: Role-Based Authentication & SQLite Integration.
+          ClassMate AI &copy; 2026. Module 2: Classroom Management & Membership.
         </div>
       </footer>
     </div>

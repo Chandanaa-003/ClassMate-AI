@@ -8,6 +8,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.classroom import Classroom, ClassroomMembership
     from app.models.doubt import Answer, Doubt, Vote
+    from app.models.lecture import Lecture
     from app.models.subject import Subject
 
 
@@ -70,6 +71,11 @@ class User(Base):
     votes: Mapped[List["Vote"]] = relationship(
         "Vote",
         back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    lectures: Mapped[List["Lecture"]] = relationship(
+        "Lecture",
+        back_populates="uploader",
         cascade="all, delete-orphan",
     )
 

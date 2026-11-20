@@ -9,6 +9,7 @@ import { SubjectModal } from './SubjectModal';
 import { AskDoubtModal } from './AskDoubtModal';
 import { DoubtCard } from './DoubtCard';
 import { DoubtThread } from './DoubtThread';
+import { LectureLibrary } from './LectureLibrary';
 import {
   BookOpen,
   Calendar,
@@ -21,6 +22,7 @@ import {
   Search,
   ArrowLeft,
   Sparkles,
+  Headphones,
 } from 'lucide-react';
 
 interface SubjectDetailProps {
@@ -35,6 +37,7 @@ interface SubjectDetailProps {
 export const SubjectDetail: React.FC<SubjectDetailProps> = ({
   token,
   subjectId,
+  userRole,
   onBackToClassroom,
   onBackToDashboard,
   onSubjectDeleted,
@@ -44,6 +47,7 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'lectures' | 'doubts' | 'materials'>('lectures');
 
   // Doubts state
   const [doubts, setDoubts] = useState<Doubt[]>([]);
@@ -240,8 +244,64 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
         </div>
       </div>
 
-      {/* Module 4: Anonymous Doubt Discussion Board */}
-      {selectedDoubtId ? (
+      {/* Main Workspace Navigation Tabs */}
+      <div className="flex items-center space-x-2 border-b border-slate-200/80 pb-2">
+        <button
+          onClick={() => {
+            setActiveWorkspaceTab('lectures');
+            setSelectedDoubtId(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeWorkspaceTab === 'lectures'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Headphones className="w-4 h-4" />
+          <span>Lecture Library & Audio</span>
+        </button>
+
+        <button
+          onClick={() => setActiveWorkspaceTab('doubts')}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeWorkspaceTab === 'doubts'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>Anonymous Doubt Board</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveWorkspaceTab('materials');
+            setSelectedDoubtId(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeWorkspaceTab === 'materials'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Study Materials</span>
+        </button>
+      </div>
+
+      {/* Tab Content: Module 5 Lecture Library */}
+      {activeWorkspaceTab === 'lectures' && (
+        <LectureLibrary
+          token={token}
+          subjectId={subject.id}
+          userRole={userRole}
+          isClassroomLecturer={subject.is_lecturer}
+        />
+      )}
+
+      {/* Tab Content: Module 4 Anonymous Doubt Discussion Board */}
+      {activeWorkspaceTab === 'doubts' && (
+        selectedDoubtId ? (
         <DoubtThread
           token={token}
           doubtId={selectedDoubtId}
@@ -351,6 +411,19 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
               ))}
             </div>
           )}
+        </div>
+      ))}
+
+      {/* Tab Content: Study Materials Placeholder */}
+      {activeWorkspaceTab === 'materials' && (
+        <div className="bg-white rounded-3xl p-10 border border-slate-200/80 text-center space-y-3 shadow-sm">
+          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl mx-auto flex items-center justify-center">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-bold text-slate-800">Study Materials & Notes</h4>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Lecture slides, notes, AI automated summaries, and quizzes will be available in this section.
+          </p>
         </div>
       )}
 

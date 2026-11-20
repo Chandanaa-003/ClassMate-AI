@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, and **Module 4: Anonymous Doubt Discussion**.
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, AuthContext state management.
-- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, single-vote integrity.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 4 modules.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, and **Module 5: Lecture Recording and Upload System**.
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, MediaRecorder browser audio capture, AuthContext state management.
+- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, Uvicorn.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, path traversal defense, file type/size validation, and lecturer approval workflows.
+- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 5 modules.
 
 ---
 
@@ -29,7 +29,8 @@ classmate_ai/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py         # Settings & environment validation
 │   │   │   ├── codes.py          # Unique join code generator (CM-XXXX)
-│   │   │   └── security.py       # Bcrypt hashing & PyJWT token utilities
+│   │   │   ├── security.py       # Bcrypt hashing & PyJWT token utilities
+│   │   │   └── storage.py        # Modular audio file storage & validation
 │   │   ├── db/
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py           # SQLAlchemy declarative base
@@ -39,14 +40,16 @@ classmate_ai/
 │   │   │   ├── user.py           # User model with Student & Lecturer roles
 │   │   │   ├── classroom.py      # Classroom & ClassroomMembership models
 │   │   │   ├── subject.py        # Subject model with classroom & creator relations
-│   │   │   └── doubt.py          # Doubt, Answer, and Vote models
+│   │   │   ├── doubt.py          # Doubt, Answer, and Vote models
+│   │   │   └── lecture.py        # Lecture recording model with approval statuses
 │   │   ├── schemas/              # Pydantic data validation schemas
 │   │   │   ├── __init__.py
 │   │   │   ├── health.py         # Health check response schema
 │   │   │   ├── user.py           # User authentication schemas
 │   │   │   ├── classroom.py      # Classroom request/response schemas
 │   │   │   ├── subject.py        # Subject create, update, response schemas
-│   │   │   └── doubt.py          # Doubt, Answer, Vote create & response schemas
+│   │   │   ├── doubt.py          # Doubt, Answer, Vote create & response schemas
+│   │   │   └── lecture.py        # Lecture upload, review, and response schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -57,6 +60,7 @@ classmate_ai/
 │   │           ├── classroom.py  # Classroom creation, joining, roster, and leaving
 │   │           ├── subject.py    # Subject CRUD, duplicate checks, member access
 │   │           ├── doubt.py      # Anonymous doubts, answers, voting & acceptance
+│   │           ├── lecture.py    # Audio upload, streaming, review & deletion
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
@@ -64,6 +68,7 @@ classmate_ai/
 │       ├── test_classroom.py     # Classroom lifecycle, joining, isolation, leave tests
 │       ├── test_subject.py       # Subject CRUD, permissions, duplicates, access tests
 │       ├── test_doubt.py         # Anonymity masking, single vote, answers, acceptance
+│       ├── test_lecture.py       # Audio uploads, review workflow, privacy, streaming
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -89,7 +94,12 @@ classmate_ai/
         │   ├── ClassroomDetail.tsx # Classroom workspace, subjects & member roster
         │   ├── SubjectCard.tsx   # Responsive subject card with edit/delete actions
         │   ├── SubjectModal.tsx  # Create/edit subject dialog
-        │   ├── SubjectDetail.tsx # Subject workspace, tabs & doubt board
+        │   ├── SubjectDetail.tsx # Subject workspace, tabs, doubts & lecture library
+        │   ├── AudioPlayer.tsx   # Interactive audio player with scrubber & speed controls
+        │   ├── RecordLectureModal.tsx # MediaRecorder audio recording with consent check
+        │   ├── UploadLectureModal.tsx # Drag & drop audio uploader with validation
+        │   ├── ReviewLectureModal.tsx # Lecturer audio review, approval & rejection modal
+        │   ├── LectureLibrary.tsx # Lecture library, review queue & student uploads
         │   ├── DoubtCard.tsx     # Discussion question card with badges & counts
         │   ├── DoubtThread.tsx   # Complete discussion thread, replies & upvoting
         │   ├── AskDoubtModal.tsx # Anonymous/identified doubt question composer
@@ -101,12 +111,14 @@ classmate_ai/
         │   ├── auth.ts           # Authentication API client
         │   ├── classroom.ts      # Classroom management API client
         │   ├── subject.ts        # Subject management API client
-        │   └── doubt.ts          # Doubts, answers, voting & acceptance client
+        │   ├── doubt.ts          # Doubts, answers, voting & acceptance client
+        │   └── lecture.ts        # Audio upload, review & streaming client
         └── types/                # TypeScript interface definitions
             ├── auth.ts           # User, Role, AuthResponse types
             ├── classroom.ts      # Classroom, Member, Payload types
             ├── subject.ts        # Subject, Create/Update Payload types
             ├── doubt.ts          # Doubt, Answer, Vote, Filter types
+            ├── lecture.ts        # Lecture, Review, Status types
             └── health.ts         # Health API response types
 ```
 
@@ -163,6 +175,37 @@ classmate_ai/
 
 ---
 
+## 🎙️ Module 5: Lecture Recording & Upload System
+
+### Lecture Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/subjects/{subject_id}/lectures/upload` | Upload lecture audio (MP3, WAV, WebM) | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/subjects/{subject_id}/lectures` | List lectures with approval visibility filter | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/lectures/{lecture_id}` | Retrieve lecture metadata & details | Yes | Member (Approved) / Uploader / Lecturer |
+| `GET` | `/api/v1/lectures/{lecture_id}/audio` | Stream lecture audio with partial ranges | Yes | Member (Approved) / Uploader / Lecturer |
+| `PATCH` | `/api/v1/lectures/{lecture_id}/review` | Approve or reject a lecture recording | Yes | Classroom Lecturer Owner |
+| `DELETE` | `/api/v1/lectures/{lecture_id}` | Delete lecture recording and audio file | Yes | Uploader or Classroom Lecturer |
+
+### Modular Audio Storage & Defense-in-Depth
+- **Modular Storage Architecture (`app/core/storage.py`)**: Audio files are stored under `backend/uploads/lectures/` with cryptographically random UUID filenames (`{uuid4}.{ext}`). Internal filesystem paths are never leaked in client responses; instead, clients receive secure streaming endpoints (`/api/v1/lectures/{id}/audio`).
+- **Path Traversal Defense**: Strict resolution checks (`resolved_path.startswith(BASE_UPLOAD_DIR)`) ensure malicious paths (e.g. `../../etc/passwd`) are immediately rejected with **400 Bad Request**.
+- **Format & Size Validation**: Enforces whitelist of safe audio extensions (`.mp3`, `.wav`, `.webm`, `.ogg`, `.m4a`, `.aac`) and audio MIME types, along with a strict **50 MB file size limit**.
+- **Browser Audio Recording (`MediaRecorder` API)**:
+  - Users can record live classroom audio directly from the browser.
+  - Required consent check ensures recordings are conducted with lecturer authorization.
+  - Gracefully handles microphone permission denials (`NotAllowedError`), missing devices (`NotFoundError`), and unsupported browsers.
+  - Live timer, visual recording pulse, pause/resume, stop, and local audio preview before submission.
+- **Lecturer Review & Approval Pipeline**:
+  - Student recordings default to `PENDING` status.
+  - **Zero Leakage**: Pending and rejected recordings are strictly hidden from general classroom members.
+  - Lecturers access a dedicated **Review Queue** with audio player preview, one-click **Approve**, or **Reject** with structured feedback.
+  - Students can track their submission status (`Pending`, `Approved`, `Rejected`) under their **My Uploads** tab.
+- **Dual Stream Authentication**: Supports both standard Bearer headers and query parameters (`?token=...`) allowing HTML5 `<audio>` tags to stream, seek, and scrub with full HTTP range request support.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Run the Backend Server
@@ -177,8 +220,8 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### 2. Run Backend Tests
 
 ```powershell
-# Run all test suites across Modules 1 - 4
-$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_health.py
+# Run all test suites across Modules 1 - 5
+$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_lecture.py; python backend/tests/test_health.py
 ```
 
 ### 3. Run the Frontend Development Server

@@ -15,6 +15,7 @@ from app.schemas.doubt import (
     VoteResponse,
 )
 from app.schemas.health import HealthCheckResponse
+from app.schemas.lecture import LectureDeleteResponse, LectureResponse, LectureReviewRequest
 from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate
 from app.schemas.user import Token, TokenPayload, UserCreate, UserLogin, UserResponse, UserRole
 
@@ -30,6 +31,9 @@ __all__ = [
     "DoubtDetailResponse",
     "DoubtResponse",
     "HealthCheckResponse",
+    "LectureDeleteResponse",
+    "LectureResponse",
+    "LectureReviewRequest",
     "SubjectCreate",
     "SubjectResponse",
     "SubjectUpdate",

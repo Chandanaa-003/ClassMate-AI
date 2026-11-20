@@ -45,6 +45,15 @@ venv.bak/
 *.sqlite3
 *.db-journal
 
+# Uploads & Media Storage
+uploads/
+backend/uploads/
+*.mp3
+*.wav
+*.webm
+*.ogg
+*.m4a
+
 # Node & Frontend
 node_modules/
 frontend/dist/

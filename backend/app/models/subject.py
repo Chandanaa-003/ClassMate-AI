@@ -7,6 +7,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.classroom import Classroom
     from app.models.doubt import Doubt
+    from app.models.lecture import Lecture
     from app.models.user import User
 
 
@@ -47,6 +48,12 @@ class Subject(Base):
         "Doubt",
         back_populates="subject",
         cascade="all, delete-orphan",
+    )
+    lectures: Mapped[List["Lecture"]] = relationship(
+        "Lecture",
+        back_populates="subject",
+        cascade="all, delete-orphan",
+        order_by="desc(Lecture.created_at)",
     )
 
     def __repr__(self) -> str:

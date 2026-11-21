@@ -7,6 +7,11 @@ from app.schemas.ai import (
     TranscriptResponse,
     TranscriptUpdateRequest,
 )
+from app.schemas.announcement import (
+    AnnouncementCreate,
+    AnnouncementResponse,
+    AnnouncementUpdate,
+)
 from app.schemas.classroom import (
     ClassroomCreate,
     ClassroomDetailResponse,
@@ -32,10 +37,19 @@ from app.schemas.feedback import (
 )
 from app.schemas.health import HealthCheckResponse
 from app.schemas.lecture import LectureDeleteResponse, LectureResponse, LectureReviewRequest
+from app.schemas.notification import (
+    MarkReadResponse,
+    NotificationListResponse,
+    NotificationResponse,
+    UnreadCountResponse,
+)
 from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate
 from app.schemas.user import Token, TokenPayload, UserCreate, UserLogin, UserResponse, UserRole
 
 __all__ = [
+    "AnnouncementCreate",
+    "AnnouncementResponse",
+    "AnnouncementUpdate",
     "AnonymizedFeedbackItem",
     "AnswerCreate",
     "AnswerResponse",
@@ -53,6 +67,9 @@ __all__ = [
     "FeedbackUpdate",
     "GenerateNotesRequest",
     "HealthCheckResponse",
+    "MarkReadResponse",
+    "NotificationListResponse",
+    "NotificationResponse",
     "SubjectAnalyticsResponse",
     "LectureDeleteResponse",
     "LectureResponse",
@@ -67,6 +84,7 @@ __all__ = [
     "TranscribeRequest",
     "TranscriptResponse",
     "TranscriptUpdateRequest",
+    "UnreadCountResponse",
     "UserCreate",
     "UserLogin",
     "UserResponse",

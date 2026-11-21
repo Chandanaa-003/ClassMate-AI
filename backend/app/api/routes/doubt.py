@@ -16,6 +16,7 @@ from app.schemas.doubt import (
     DoubtResponse,
     VoteResponse,
 )
+from app.services.notification import create_notification
 
 router = APIRouter(tags=["Doubts & Discussions"])
 
@@ -129,6 +130,20 @@ def create_doubt(
     db.add(doubt)
     db.commit()
     db.refresh(doubt)
+
+    # Notify classroom lecturer of newly created doubt
+    classroom = subject.classroom
+    if classroom.lecturer_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=classroom.lecturer_id,
+            title="New Doubt Question Posted",
+            message=f"A new question '{doubt.title}' was posted in {subject.name}.",
+            notification_type="doubt_created",
+            classroom_id=classroom.id,
+            subject_id=subject.id,
+            resource_id=doubt.id,
+        )
 
     return build_doubt_response(doubt, current_user.id, is_lecturer)
 
@@ -244,6 +259,19 @@ def create_answer(
     db.commit()
     db.refresh(answer)
 
+    # Notify doubt author if someone else answered
+    if doubt.author_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=doubt.author_id,
+            title="New Answer to Your Question",
+            message=f"Someone posted an answer to your question '{doubt.title}'.",
+            notification_type="doubt_answered",
+            classroom_id=doubt.subject.classroom_id,
+            subject_id=doubt.subject.id,
+            resource_id=doubt.id,
+        )
+
     return build_answer_response(answer, current_user.id)
 
 
@@ -332,6 +360,19 @@ def accept_answer(
 
     db.commit()
     db.refresh(answer)
+
+    # Notify answer author when answer is accepted
+    if answer.is_accepted and answer.author_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=answer.author_id,
+            title="Your Answer Was Accepted!",
+            message=f"Your answer to '{doubt.title}' was marked as accepted.",
+            notification_type="answer_accepted",
+            classroom_id=doubt.subject.classroom_id,
+            subject_id=doubt.subject.id,
+            resource_id=doubt.id,
+        )
 
     return build_answer_response(answer, current_user.id)
 

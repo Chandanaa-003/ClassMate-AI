@@ -5,10 +5,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.announcement import Announcement
     from app.models.classroom import Classroom
     from app.models.doubt import Doubt
     from app.models.feedback import Feedback
     from app.models.lecture import Lecture
+    from app.models.notification import Notification
     from app.models.user import User
 
 
@@ -61,6 +63,17 @@ class Subject(Base):
         back_populates="subject",
         cascade="all, delete-orphan",
         order_by="desc(Feedback.created_at)",
+    )
+    announcements: Mapped[List["Announcement"]] = relationship(
+        "Announcement",
+        back_populates="subject",
+        cascade="all, delete-orphan",
+        order_by="desc(Announcement.created_at)",
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification",
+        back_populates="subject",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

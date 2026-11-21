@@ -21,6 +21,7 @@ from app.schemas.ai import (
 )
 from app.services.ai.notes_generator import generate_smart_notes
 from app.services.ai.transcription import transcribe_audio_file
+from app.services.notification import create_notification
 
 router = APIRouter(tags=["AI Transcription & Smart Notes"])
 
@@ -86,6 +87,21 @@ def process_notes_job(lecture_id: int):
         note.status = ProcessingStatus.COMPLETED.value
         note.error_message = None
         db.commit()
+
+        # Notify lecture uploader that Smart Notes are ready
+        try:
+            create_notification(
+                db=db,
+                recipient_id=lecture.uploaded_by_id,
+                title="Smart Notes Generated",
+                message=f"AI Smart Notes are now ready for '{lecture.title}'.",
+                notification_type="smart_notes_ready",
+                classroom_id=lecture.subject.classroom_id,
+                subject_id=lecture.subject_id,
+                resource_id=lecture.id,
+            )
+        except Exception:
+            pass
     except Exception as exc:
         db.rollback()
         note = db.query(SmartNote).filter(SmartNote.lecture_id == lecture_id).first()

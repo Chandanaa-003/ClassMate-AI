@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, **Module 6: AI Audio Transcription and Smart Notes**, and **Module 8: Anonymous Feedback and Lecturer Analytics**.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, **Module 6: AI Audio Transcription and Smart Notes**, **Module 8: Anonymous Feedback and Lecturer Analytics**, and **Module 9: Notifications and Classroom Announcements**.
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, MediaRecorder browser audio capture, AuthContext state management.
 - **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, OpenAI Whisper / GPT-4o-mini SDK, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`, `feedbacks`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, strict student identity isolation in feedback, path traversal defense, file type/size validation, and background AI job isolation.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all modules.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`, `feedbacks`, `announcements`, `notifications`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, strict student identity isolation in feedback, private notification ownership, path traversal defense, file type/size validation, and background AI job isolation.
+- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 9 modules.
 
 ---
 
@@ -44,9 +44,12 @@ classmate_ai/
 │   │   │   ├── lecture.py        # Lecture recording model with approval statuses
 │   │   │   ├── transcript.py     # AI transcript model with timestamps & language
 │   │   │   ├── smart_note.py     # 9-section structured smart notes model
-│   │   │   └── feedback.py       # Anonymous feedback model & unique constraints
+│   │   │   ├── feedback.py       # Anonymous feedback model & unique constraints
+│   │   │   ├── announcement.py   # Classroom & subject announcement model
+│   │   │   └── notification.py   # In-app notifications & type classification
 │   │   ├── services/             # Core business & AI service layer
 │   │   │   ├── analytics.py      # Feedback metrics & theme extraction service
+│   │   │   ├── notification.py   # In-app notification dispatcher & dedup logic
 │   │   │   └── ai/
 │   │   │       ├── __init__.py
 │   │   │       ├── provider.py   # AI provider configuration & client factory
@@ -61,7 +64,9 @@ classmate_ai/
 │   │   │   ├── doubt.py          # Doubt, Answer, Vote create & response schemas
 │   │   │   ├── lecture.py        # Lecture upload, review, and response schemas
 │   │   │   ├── ai.py             # Transcript, segment & smart note schemas
-│   │   │   └── feedback.py       # Anonymous feedback & analytics schemas
+│   │   │   ├── feedback.py       # Anonymous feedback & analytics schemas
+│   │   │   ├── announcement.py   # Announcement create, update & response schemas
+│   │   │   └── notification.py   # Notification list & count response schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -75,6 +80,8 @@ classmate_ai/
 │   │           ├── lecture.py    # Audio upload, streaming, review & deletion
 │   │           ├── ai.py         # Async transcription & smart notes endpoints
 │   │           ├── feedback.py   # Anonymous student feedback & analytics endpoints
+│   │           ├── announcements.py # Lecturer announcements CRUD & broadcast
+│   │           ├── notifications.py # Notification feed, read tracking & badge counts
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
@@ -85,6 +92,7 @@ classmate_ai/
 │       ├── test_lecture.py       # Audio uploads, review workflow, privacy, streaming
 │       ├── test_ai.py            # AI transcription, Kannada/mixed, notes, edit, retry
 │       ├── test_feedback.py      # Anonymous feedback, single-submission, isolation & analytics
+│       ├── test_notification.py  # Announcements, notification triggers, ownership & dedup
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -100,19 +108,23 @@ classmate_ai/
         ├── context/
         │   └── AuthContext.tsx   # Global authentication state & session persistence
         ├── components/           # Reusable UI components
-        │   ├── Header.tsx        # Top navigation, role badges & logout
+        │   ├── Header.tsx        # Top navigation, notification bell & logout
         │   ├── Breadcrumbs.tsx   # Breadcrumb navigation trails
         │   ├── Login.tsx         # Login form with validation & demo credentials
         │   ├── Register.tsx      # Registration form with role picker
         │   ├── StudentDashboard.tsx # Student workspace & enrolled classrooms
         │   ├── LecturerDashboard.tsx# Lecturer faculty portal & teaching classrooms
         │   ├── ClassroomCard.tsx # Reusable classroom card with copy code trigger
-        │   ├── ClassroomDetail.tsx # Classroom workspace, subjects, roster & analytics tab
+        │   ├── ClassroomDetail.tsx # Classroom workspace, subjects, roster & announcements
         │   ├── SubjectCard.tsx   # Responsive subject card with edit/delete actions
         │   ├── SubjectModal.tsx  # Create/edit subject dialog
-        │   ├── SubjectDetail.tsx # Subject workspace, tabs, doubts, lectures & feedback
+        │   ├── SubjectDetail.tsx # Subject workspace, tabs, doubts, lectures & announcements
         │   ├── StudentFeedbackForm.tsx # 1-5 star ratings, period picker, anonymous submit/edit
         │   ├── LecturerFeedbackAnalytics.tsx # KPI summary cards, rating bars, themes & comments
+        │   ├── NotificationBell.tsx # Bell icon with unread badge & live polling dropdown
+        │   ├── NotificationModal.tsx # Full notification center dialog with filters & actions
+        │   ├── AnnouncementList.tsx # Priority cards (Urgent, Important, Normal) & edit/delete
+        │   ├── AnnouncementModal.tsx # Lecturer announcement composer dialog
         │   ├── AudioPlayer.tsx   # Interactive audio player with scrubber & speed controls
         │   ├── RecordLectureModal.tsx # MediaRecorder audio recording with consent check
         │   ├── UploadLectureModal.tsx # Drag & drop audio uploader with validation
@@ -134,7 +146,9 @@ classmate_ai/
         │   ├── doubt.ts          # Doubts, answers, voting & acceptance client
         │   ├── lecture.ts        # Audio upload, review & streaming client
         │   ├── ai.ts             # AI transcription & smart notes client
-        │   └── feedback.ts       # Feedback submission & analytics client
+        │   ├── feedback.ts       # Feedback submission & analytics client
+        │   ├── announcement.ts   # Classroom & subject announcement client
+        │   └── notification.ts   # In-app notification & unread count client
         └── types/                # TypeScript interface definitions
             ├── auth.ts           # User, Role, AuthResponse types
             ├── classroom.ts      # Classroom, Member, Payload types
@@ -143,6 +157,8 @@ classmate_ai/
             ├── lecture.ts        # Lecture, Review, Status types
             ├── ai.ts             # Transcript, Segment, SmartNote types
             ├── feedback.ts       # Feedback, Analytics, Distribution types
+            ├── announcement.ts   # Announcement, Priority, Payload types
+            ├── notification.ts   # Notification, UnreadCount types
             └── health.ts         # Health API response types
 ```
 
@@ -287,6 +303,43 @@ classmate_ai/
 
 ---
 
+## 📢 Module 9: Notifications and Classroom Announcements
+
+### Announcement Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/classrooms/{classroom_id}/announcements` | Publish a classroom or subject announcement | Yes | Classroom Lecturer Owner |
+| `GET` | `/api/v1/classrooms/{classroom_id}/announcements` | List classroom announcements (optional subject filter) | Yes | Classroom Member or Lecturer |
+| `GET` | `/api/v1/announcements/{announcement_id}` | Retrieve specific announcement details | Yes | Classroom Member or Lecturer |
+| `PUT` | `/api/v1/announcements/{announcement_id}` | Update announcement title, content or priority | Yes | Classroom Lecturer Owner |
+| `DELETE` | `/api/v1/announcements/{announcement_id}` | Delete announcement | Yes | Classroom Lecturer Owner |
+
+### Notification Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `GET` | `/api/v1/notifications` | List user's notifications (supports pagination & read filter) | Yes | Authenticated Recipient |
+| `GET` | `/api/v1/notifications/unread-count` | Get total unread count for badge indicators | Yes | Authenticated Recipient |
+| `PATCH` | `/api/v1/notifications/{notification_id}/read` | Mark a single notification as read | Yes | Notification Owner |
+| `PATCH` | `/api/v1/notifications/read-all` | Mark all notifications as read for current user | Yes | Authenticated User |
+| `DELETE` | `/api/v1/notifications/{notification_id}` | Delete a notification | Yes | Notification Owner |
+
+### Notification Triggers & Automated Broadcasts
+- **Classroom & Subject Announcements**: Emits an in-app notification to all enrolled student members in the classroom (the author lecturer is automatically excluded).
+- **Lecture Upload Alerts**: When a student uploads audio, the classroom lecturer receives a `lecture_uploaded` notification.
+- **Lecture Approval Alerts**: When a lecturer approves student audio, the student receives a `lecture_approved` notification.
+- **AI Smart Notes Ready**: When async AI notes generation completes, the lecture uploader receives a `smart_notes_ready` notification.
+- **Doubt Discussions**:
+  - When a student posts a question, the lecturer receives a `doubt_created` notification.
+  - When an answer is posted, the doubt author receives a `doubt_answered` notification.
+  - When an answer is accepted, the answer author receives an `answer_accepted` notification.
+- **Anonymous Student Feedback**: Classroom lecturers receive a `feedback_submitted` notification without leaking student identity.
+- **Duplicate Prevention**: In-app notifications with identical `(recipient_id, notification_type, resource_id)` within a recent time window are prevented from creating duplicate alerts.
+- **Real-Time Polling & Architecture**: The frontend notification center polls `GET /api/v1/notifications/unread-count` every 20 seconds while the user is logged in, with cancellation on unmount and duplicate-request throttling.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Run the Backend Server
@@ -301,7 +354,7 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### 2. Run Backend Tests
 
 ```powershell
-# Run all test suites across Modules 1 - 6 & Module 8
+# Run all test suites across Modules 1 - 6, Module 8 & Module 9
 $env:PYTHONPATH="backend"
 python backend/tests/test_health.py
 python backend/tests/test_auth.py
@@ -311,6 +364,7 @@ python backend/tests/test_doubt.py
 python backend/tests/test_lecture.py
 python backend/tests/test_ai.py
 python backend/tests/test_feedback.py
+python backend/tests/test_notification.py
 ```
 
 ### 3. Run the Frontend Development Server

@@ -5,6 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.announcement import Announcement
+    from app.models.notification import Notification
     from app.models.subject import Subject
     from app.models.user import User
 
@@ -40,6 +42,17 @@ class Classroom(Base):
     )
     subjects: Mapped[List["Subject"]] = relationship(
         "Subject",
+        back_populates="classroom",
+        cascade="all, delete-orphan",
+    )
+    announcements: Mapped[List["Announcement"]] = relationship(
+        "Announcement",
+        back_populates="classroom",
+        cascade="all, delete-orphan",
+        order_by="desc(Announcement.created_at)",
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification",
         back_populates="classroom",
         cascade="all, delete-orphan",
     )

@@ -17,6 +17,7 @@ from app.schemas.feedback import (
     SubjectAnalyticsResponse,
 )
 from app.services.analytics import calculate_feedback_metrics, extract_feedback_themes
+from app.services.notification import create_notification
 
 router = APIRouter(tags=["Anonymous Feedback & Analytics"])
 
@@ -116,6 +117,20 @@ def submit_feedback(
     db.add(feedback)
     db.commit()
     db.refresh(feedback)
+
+    # Notify classroom lecturer of newly submitted anonymous feedback
+    classroom = subject.classroom
+    if classroom.lecturer_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=classroom.lecturer_id,
+            title="New Student Feedback Submitted",
+            message=f"A student submitted anonymous feedback for {subject.name} ({period}).",
+            notification_type="feedback_submitted",
+            classroom_id=classroom.id,
+            subject_id=subject.id,
+            resource_id=subject.id,
+        )
 
     return build_feedback_response(feedback, current_user.id)
 

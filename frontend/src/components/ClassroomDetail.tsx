@@ -8,6 +8,7 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { SubjectCard } from './SubjectCard';
 import { SubjectModal } from './SubjectModal';
 import { LecturerFeedbackAnalytics } from './LecturerFeedbackAnalytics';
+import { AnnouncementList } from './AnnouncementList';
 import {
   Users,
   Copy,
@@ -22,6 +23,7 @@ import {
   Layers,
   Sparkles,
   BarChart3,
+  Megaphone,
 } from 'lucide-react';
 
 interface ClassroomDetailProps {
@@ -43,7 +45,7 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
 }) => {
   const [classroom, setClassroom] = useState<IClassroomDetail | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'members' | 'analytics'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'announcements' | 'members' | 'analytics'>('subjects');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
@@ -321,6 +323,18 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('announcements')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            activeTab === 'announcements'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          <span>Announcements</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('members')}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'members'
@@ -489,6 +503,16 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
           classroomId={classroom.id}
           title={`${classroom.name} - Classroom Overview`}
           onSelectSubject={onSelectSubject}
+        />
+      )}
+
+      {/* Tab Content: Module 9 Classroom Announcements */}
+      {activeTab === 'announcements' && (
+        <AnnouncementList
+          token={token}
+          classroomId={classroom.id}
+          isLecturer={classroom.is_lecturer}
+          subjects={subjects}
         />
       )}
 

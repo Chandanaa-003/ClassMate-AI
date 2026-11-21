@@ -1,12 +1,16 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap, LogOut, Activity, LayoutDashboard } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
+import { Notification } from '../types/notification';
 
 interface HeaderProps {
   currentView: 'auth' | 'dashboard' | 'health';
   onSelectView: (view: 'auth' | 'dashboard' | 'health') => void;
   authMode: 'login' | 'register';
   onSelectAuthMode: (mode: 'login' | 'register') => void;
+  onOpenNotifications?: () => void;
+  onNavigateNotification?: (notif: Notification) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,8 +18,10 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectView,
   authMode,
   onSelectAuthMode,
+  onOpenNotifications,
+  onNavigateNotification,
 }) => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
 
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
@@ -62,6 +68,14 @@ export const Header: React.FC<HeaderProps> = ({
 
           {user ? (
             <div className="flex items-center space-x-3">
+              {token && onOpenNotifications && (
+                <NotificationBell
+                  token={token}
+                  onOpenFullCenter={onOpenNotifications}
+                  onNavigateNotification={onNavigateNotification}
+                />
+              )}
+
               <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-slate-200">
                 <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
                   {user.full_name.charAt(0).toUpperCase()}

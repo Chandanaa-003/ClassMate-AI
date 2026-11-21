@@ -8,6 +8,8 @@ import { LecturerDashboard } from './components/LecturerDashboard';
 import { ClassroomDetail } from './components/ClassroomDetail';
 import { SubjectDetail } from './components/SubjectDetail';
 import { HealthCheck } from './components/HealthCheck';
+import { NotificationModal } from './components/NotificationModal';
+import { Notification } from './types/notification';
 import { Sparkles } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -16,6 +18,7 @@ const AppContent: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -32,6 +35,16 @@ const AppContent: React.FC = () => {
     setCurrentView(view);
   };
 
+  const handleNavigateNotification = (notif: Notification) => {
+    setCurrentView('dashboard');
+    if (notif.classroom_id) {
+      setSelectedClassroomId(notif.classroom_id);
+    }
+    if (notif.subject_id) {
+      setSelectedSubjectId(notif.subject_id);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header
@@ -39,6 +52,8 @@ const AppContent: React.FC = () => {
         onSelectView={handleSelectView}
         authMode={authMode}
         onSelectAuthMode={setAuthMode}
+        onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        onNavigateNotification={handleNavigateNotification}
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -122,9 +137,18 @@ const AppContent: React.FC = () => {
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-auto">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
-          ClassMate AI &copy; 2026. Module 3: Subject Management & Syllabi Organization.
+          ClassMate AI &copy; 2026. Module 9: Notifications and Classroom Announcements.
         </div>
       </footer>
+
+      {user && token && (
+        <NotificationModal
+          token={token}
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+          onNavigateNotification={handleNavigateNotification}
+        />
+      )}
     </div>
   );
 };

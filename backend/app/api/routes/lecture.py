@@ -21,6 +21,7 @@ from app.schemas.lecture import (
     LectureResponse,
     LectureReviewRequest,
 )
+from app.services.notification import create_notification
 
 router = APIRouter(tags=["Lectures & Recordings"])
 
@@ -155,6 +156,19 @@ def upload_lecture(
     db.add(lecture)
     db.commit()
     db.refresh(lecture)
+
+    # Trigger notification to lecturer if uploaded by a student
+    if current_user.role == UserRole.STUDENT and subject.classroom.lecturer_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=subject.classroom.lecturer_id,
+            title="New Lecture Recording Uploaded",
+            message=f"{current_user.full_name} uploaded '{lecture.title}' in {subject.name}.",
+            notification_type="lecture_uploaded",
+            classroom_id=subject.classroom_id,
+            subject_id=subject.id,
+            resource_id=lecture.id,
+        )
 
     return build_lecture_response(lecture, current_user.id, is_lecturer)
 
@@ -361,6 +375,19 @@ def review_lecture(
 
     db.commit()
     db.refresh(lecture)
+
+    # Trigger notification to uploader if approved and uploader is not lecturer
+    if new_status == LectureStatus.APPROVED.value and lecture.uploaded_by_id != current_user.id:
+        create_notification(
+            db=db,
+            recipient_id=lecture.uploaded_by_id,
+            title="Lecture Recording Approved",
+            message=f"Your lecture '{lecture.title}' in {lecture.subject.name} has been approved by the instructor.",
+            notification_type="lecture_approved",
+            classroom_id=lecture.subject.classroom_id,
+            subject_id=lecture.subject_id,
+            resource_id=lecture.id,
+        )
 
     return build_lecture_response(lecture, current_user.id, is_lecturer=True)
 

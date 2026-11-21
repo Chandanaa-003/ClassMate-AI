@@ -12,6 +12,7 @@ import { DoubtThread } from './DoubtThread';
 import { LectureLibrary } from './LectureLibrary';
 import { StudentFeedbackForm } from './StudentFeedbackForm';
 import { LecturerFeedbackAnalytics } from './LecturerFeedbackAnalytics';
+import { AnnouncementList } from './AnnouncementList';
 import {
   BookOpen,
   Calendar,
@@ -27,6 +28,7 @@ import {
   Headphones,
   ShieldCheck,
   BarChart3,
+  Megaphone,
 } from 'lucide-react';
 
 interface SubjectDetailProps {
@@ -51,7 +53,7 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'lectures' | 'doubts' | 'materials' | 'feedback'>('lectures');
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'lectures' | 'doubts' | 'announcements' | 'materials' | 'feedback'>('lectures');
 
   // Doubts state
   const [doubts, setDoubts] = useState<Doubt[]>([]);
@@ -279,6 +281,21 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
 
         <button
           onClick={() => {
+            setActiveWorkspaceTab('announcements');
+            setSelectedDoubtId(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeWorkspaceTab === 'announcements'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          <span>Announcements</span>
+        </button>
+
+        <button
+          onClick={() => {
             setActiveWorkspaceTab('materials');
             setSelectedDoubtId(null);
           }}
@@ -470,6 +487,16 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
             subjectName={subject.name}
           />
         )
+      )}
+
+      {/* Tab Content: Module 9 Subject Announcements */}
+      {activeWorkspaceTab === 'announcements' && (
+        <AnnouncementList
+          token={token}
+          classroomId={subject.classroom_id}
+          subjectId={subject.id}
+          isLecturer={subject.is_lecturer}
+        />
       )}
 
       {/* Ask Doubt Modal */}

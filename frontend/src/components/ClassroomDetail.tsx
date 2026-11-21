@@ -7,6 +7,7 @@ import { UserRole } from '../types/auth';
 import { Breadcrumbs } from './Breadcrumbs';
 import { SubjectCard } from './SubjectCard';
 import { SubjectModal } from './SubjectModal';
+import { LecturerFeedbackAnalytics } from './LecturerFeedbackAnalytics';
 import {
   Users,
   Copy,
@@ -20,6 +21,7 @@ import {
   Plus,
   Layers,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 
 interface ClassroomDetailProps {
@@ -41,7 +43,7 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
 }) => {
   const [classroom, setClassroom] = useState<IClassroomDetail | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'members'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'members' | 'analytics'>('subjects');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
@@ -329,6 +331,20 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
           <Users className="w-4 h-4" />
           <span>Members ({classroom.members.length})</span>
         </button>
+
+        {classroom.is_lecturer && (
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Classroom Analytics</span>
+          </button>
+        )}
       </div>
 
       {/* Tab Content: Subjects */}
@@ -464,6 +480,16 @@ export const ClassroomDetail: React.FC<ClassroomDetailProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Tab Content: Module 8 Classroom Analytics */}
+      {activeTab === 'analytics' && classroom.is_lecturer && (
+        <LecturerFeedbackAnalytics
+          token={token}
+          classroomId={classroom.id}
+          title={`${classroom.name} - Classroom Overview`}
+          onSelectSubject={onSelectSubject}
+        />
       )}
 
       {/* Create/Edit Subject Modal */}

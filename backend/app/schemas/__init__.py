@@ -22,14 +22,24 @@ from app.schemas.doubt import (
     DoubtResponse,
     VoteResponse,
 )
+from app.schemas.feedback import (
+    AnonymizedFeedbackItem,
+    ClassroomAnalyticsResponse,
+    FeedbackCreate,
+    FeedbackResponse,
+    FeedbackUpdate,
+    SubjectAnalyticsResponse,
+)
 from app.schemas.health import HealthCheckResponse
 from app.schemas.lecture import LectureDeleteResponse, LectureResponse, LectureReviewRequest
 from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate
 from app.schemas.user import Token, TokenPayload, UserCreate, UserLogin, UserResponse, UserRole
 
 __all__ = [
+    "AnonymizedFeedbackItem",
     "AnswerCreate",
     "AnswerResponse",
+    "ClassroomAnalyticsResponse",
     "ClassroomCreate",
     "ClassroomDetailResponse",
     "ClassroomJoin",
@@ -38,8 +48,12 @@ __all__ = [
     "DoubtCreate",
     "DoubtDetailResponse",
     "DoubtResponse",
+    "FeedbackCreate",
+    "FeedbackResponse",
+    "FeedbackUpdate",
     "GenerateNotesRequest",
     "HealthCheckResponse",
+    "SubjectAnalyticsResponse",
     "LectureDeleteResponse",
     "LectureResponse",
     "LectureReviewRequest",

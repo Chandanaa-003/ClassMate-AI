@@ -1,6 +1,7 @@
 """Database models package."""
 from app.models.classroom import Classroom, ClassroomMembership
 from app.models.doubt import Answer, Doubt, Vote
+from app.models.feedback import Feedback
 from app.models.lecture import Lecture, LectureStatus
 from app.models.smart_note import SmartNote
 from app.models.subject import Subject
@@ -12,6 +13,7 @@ __all__ = [
     "Classroom",
     "ClassroomMembership",
     "Doubt",
+    "Feedback",
     "Lecture",
     "LectureStatus",
     "ProcessingStatus",

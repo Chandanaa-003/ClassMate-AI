@@ -2,12 +2,12 @@
 
 ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, and **Module 6: AI Transcription and Smart Notes**.
+This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, **Module 6: AI Audio Transcription and Smart Notes**, and **Module 8: Anonymous Feedback and Lecturer Analytics**.
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, MediaRecorder browser audio capture, AuthContext state management.
 - **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, OpenAI Whisper / GPT-4o-mini SDK, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, path traversal defense, file type/size validation, and background AI job isolation.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 6 modules.
+- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`, `feedbacks`).
+- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, strict student identity isolation in feedback, path traversal defense, file type/size validation, and background AI job isolation.
+- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all modules.
 
 ---
 
@@ -43,8 +43,10 @@ classmate_ai/
 │   │   │   ├── doubt.py          # Doubt, Answer, and Vote models
 │   │   │   ├── lecture.py        # Lecture recording model with approval statuses
 │   │   │   ├── transcript.py     # AI transcript model with timestamps & language
-│   │   │   └── smart_note.py     # 9-section structured smart notes model
+│   │   │   ├── smart_note.py     # 9-section structured smart notes model
+│   │   │   └── feedback.py       # Anonymous feedback model & unique constraints
 │   │   ├── services/             # Core business & AI service layer
+│   │   │   ├── analytics.py      # Feedback metrics & theme extraction service
 │   │   │   └── ai/
 │   │   │       ├── __init__.py
 │   │   │       ├── provider.py   # AI provider configuration & client factory
@@ -58,7 +60,8 @@ classmate_ai/
 │   │   │   ├── subject.py        # Subject create, update, response schemas
 │   │   │   ├── doubt.py          # Doubt, Answer, Vote create & response schemas
 │   │   │   ├── lecture.py        # Lecture upload, review, and response schemas
-│   │   │   └── ai.py             # Transcript, segment & smart note schemas
+│   │   │   ├── ai.py             # Transcript, segment & smart note schemas
+│   │   │   └── feedback.py       # Anonymous feedback & analytics schemas
 │   │   └── api/                  # API routers and endpoints
 │   │       ├── __init__.py
 │   │       ├── deps.py           # JWT token validation & role-based dependencies
@@ -71,6 +74,7 @@ classmate_ai/
 │   │           ├── doubt.py      # Anonymous doubts, answers, voting & acceptance
 │   │           ├── lecture.py    # Audio upload, streaming, review & deletion
 │   │           ├── ai.py         # Async transcription & smart notes endpoints
+│   │           ├── feedback.py   # Anonymous student feedback & analytics endpoints
 │   │           └── health.py     # System & database health-check route
 │   └── tests/                    # Backend unit & integration tests
 │       ├── __init__.py
@@ -80,6 +84,7 @@ classmate_ai/
 │       ├── test_doubt.py         # Anonymity masking, single vote, answers, acceptance
 │       ├── test_lecture.py       # Audio uploads, review workflow, privacy, streaming
 │       ├── test_ai.py            # AI transcription, Kannada/mixed, notes, edit, retry
+│       ├── test_feedback.py      # Anonymous feedback, single-submission, isolation & analytics
 │       └── test_health.py        # Health-check & endpoint verification tests
 └── frontend/                     # React + Vite + Tailwind frontend
     ├── package.json              # NPM dependencies & scripts
@@ -102,10 +107,12 @@ classmate_ai/
         │   ├── StudentDashboard.tsx # Student workspace & enrolled classrooms
         │   ├── LecturerDashboard.tsx# Lecturer faculty portal & teaching classrooms
         │   ├── ClassroomCard.tsx # Reusable classroom card with copy code trigger
-        │   ├── ClassroomDetail.tsx # Classroom workspace, subjects & member roster
+        │   ├── ClassroomDetail.tsx # Classroom workspace, subjects, roster & analytics tab
         │   ├── SubjectCard.tsx   # Responsive subject card with edit/delete actions
         │   ├── SubjectModal.tsx  # Create/edit subject dialog
-        │   ├── SubjectDetail.tsx # Subject workspace, tabs, doubts & lecture library
+        │   ├── SubjectDetail.tsx # Subject workspace, tabs, doubts, lectures & feedback
+        │   ├── StudentFeedbackForm.tsx # 1-5 star ratings, period picker, anonymous submit/edit
+        │   ├── LecturerFeedbackAnalytics.tsx # KPI summary cards, rating bars, themes & comments
         │   ├── AudioPlayer.tsx   # Interactive audio player with scrubber & speed controls
         │   ├── RecordLectureModal.tsx # MediaRecorder audio recording with consent check
         │   ├── UploadLectureModal.tsx # Drag & drop audio uploader with validation
@@ -126,7 +133,8 @@ classmate_ai/
         │   ├── subject.ts        # Subject management API client
         │   ├── doubt.ts          # Doubts, answers, voting & acceptance client
         │   ├── lecture.ts        # Audio upload, review & streaming client
-        │   └── ai.ts             # AI transcription & smart notes client
+        │   ├── ai.ts             # AI transcription & smart notes client
+        │   └── feedback.ts       # Feedback submission & analytics client
         └── types/                # TypeScript interface definitions
             ├── auth.ts           # User, Role, AuthResponse types
             ├── classroom.ts      # Classroom, Member, Payload types
@@ -134,6 +142,7 @@ classmate_ai/
             ├── doubt.ts          # Doubt, Answer, Vote, Filter types
             ├── lecture.ts        # Lecture, Review, Status types
             ├── ai.ts             # Transcript, Segment, SmartNote types
+            ├── feedback.ts       # Feedback, Analytics, Distribution types
             └── health.ts         # Health API response types
 ```
 
@@ -253,6 +262,31 @@ classmate_ai/
 
 ---
 
+## 📊 Module 8: Anonymous Feedback and Lecturer Analytics
+
+### Feedback & Analytics Endpoints
+
+| Method | Endpoint | Description | Protected | Allowed Role |
+| :--- | :--- | :--- | :---: | :---: |
+| `POST` | `/api/v1/subjects/{subject_id}/feedback` | Submit anonymous student feedback for a subject & period | Yes | Classroom Student Member |
+| `PUT` | `/api/v1/feedback/{feedback_id}` | Edit & update student's own previously submitted feedback | Yes | Feedback Author (Student) |
+| `GET` | `/api/v1/subjects/{subject_id}/feedback/me` | Fetch student's own feedback for a specific period | Yes | Feedback Author (Student) |
+| `GET` | `/api/v1/subjects/{subject_id}/feedback/analytics` | Fetch aggregated subject analytics, distribution & themes | Yes | Classroom Lecturer Owner |
+| `GET` | `/api/v1/classrooms/{classroom_id}/feedback/analytics` | Fetch classroom-wide analytics & subject comparisons | Yes | Classroom Lecturer Owner |
+
+### Strict Privacy & Anonymity Architecture
+- **Zero Identity Exposure**: In all lecturer and public feedback endpoints, `student_id`, student names, and emails are strictly withheld. The `FeedbackResponse` and `AnonymizedFeedbackItem` Pydantic schemas omit user identifiers entirely.
+- **Single Submission Guarantee**: A composite unique constraint in SQLAlchemy/SQLite (`UniqueConstraint("subject_id", "student_id", "feedback_period")`) enforces exactly one submission per student per subject per period (`general`, `midterm`, `end-term`).
+- **Student Edit Rights**: Students can safely revisit and update their submitted feedback (`PUT /api/v1/feedback/{feedback_id}`) without leaking identity to lecturers.
+- **Low Sample Size Warning**: If fewer than 3 students have submitted feedback (`has_sufficient_data: False`), the system issues an explicit preliminary sample size notice on the dashboard to prevent unwarranted statistical conclusions.
+- **Grounded Analytics & Theme Extraction**:
+  - Calculates true arithmetic means for Overall Satisfaction, Teaching Clarity, Lecture Pace, and Concept Understanding.
+  - Generates full 1-to-5 star frequency distributions and percentages.
+  - Extracts key positive strengths and actionable improvement themes directly from student remarks.
+  - Classroom-level analytics offers a side-by-side comparison table of all subjects in the course space.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Run the Backend Server
@@ -267,8 +301,16 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### 2. Run Backend Tests
 
 ```powershell
-# Run all test suites across Modules 1 - 6
-$env:PYTHONPATH="backend"; python backend/tests/test_auth.py; python backend/tests/test_classroom.py; python backend/tests/test_subject.py; python backend/tests/test_doubt.py; python backend/tests/test_lecture.py; python backend/tests/test_ai.py; python backend/tests/test_health.py
+# Run all test suites across Modules 1 - 6 & Module 8
+$env:PYTHONPATH="backend"
+python backend/tests/test_health.py
+python backend/tests/test_auth.py
+python backend/tests/test_classroom.py
+python backend/tests/test_subject.py
+python backend/tests/test_doubt.py
+python backend/tests/test_lecture.py
+python backend/tests/test_ai.py
+python backend/tests/test_feedback.py
 ```
 
 ### 3. Run the Frontend Development Server

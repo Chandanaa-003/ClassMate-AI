@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchHealth } from '../services/api';
+import { API_BASE_URL, fetchHealth } from '../services/api';
 import { HealthCheckResponse } from '../types/health';
 import {
   Activity,
@@ -74,7 +74,7 @@ export const HealthCheck: React.FC = () => {
             <h3 className="text-sm font-semibold text-rose-800">Connection Failed</h3>
             <p className="text-xs text-rose-700 mt-1">{error}</p>
             <p className="text-xs text-rose-600 mt-2 font-mono bg-rose-100/60 p-2 rounded">
-              Ensure the FastAPI backend is running at http://127.0.0.1:8000
+              Ensure the FastAPI backend is running at {API_BASE_URL}
             </p>
           </div>
         </div>

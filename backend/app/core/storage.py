@@ -24,12 +24,39 @@ ALLOWED_MIME_TYPES: Set[str] = {
     "video/mp4",
 }
 
+from app.core.config import settings
+
 # 50 MB maximum audio upload size
 MAX_FILE_SIZE_BYTES: int = 50 * 1024 * 1024
 
-# Base uploads directory (backend/uploads/lectures)
-BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads" / "lectures"
-BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+def get_base_upload_dir() -> Path:
+    """Retrieve the configured persistent storage directory or fallback to local uploads."""
+    if settings.AUDIO_STORAGE_PATH and settings.AUDIO_STORAGE_PATH.strip():
+        target = Path(settings.AUDIO_STORAGE_PATH.strip()).resolve()
+    else:
+        target = Path(__file__).resolve().parent.parent.parent / "uploads" / "lectures"
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return target
+
+
+BASE_UPLOAD_DIR = get_base_upload_dir()
+
+
+def check_storage_writable() -> Tuple[bool, str]:
+    """Verify audio storage directory is writable for production readiness probes."""
+    try:
+        target_dir = get_base_upload_dir()
+        test_file = target_dir / f".probe_{uuid.uuid4().hex[:8]}.tmp"
+        test_file.write_text("probe")
+        if test_file.exists():
+            test_file.unlink()
+        return True, str(target_dir)
+    except Exception as exc:
+        return False, str(exc)
 
 
 def get_file_extension(filename: Optional[str]) -> str:

@@ -16,10 +16,10 @@ This repository contains the complete full-stack application across all 10 modul
 
 ---
 
-## 📖 Complete Hackathon Demo Guide
+## 📖 Documentation & Guides
 
-For a step-by-step walkthrough script for presentations and hackathon evaluation, see:
-👉 **[DEMO_GUIDE.md](file:///d:/classmate_ai/DEMO_GUIDE.md)**
+- 👉 **[DEMO_GUIDE.md](file:///d:/classmate_ai/DEMO_GUIDE.md)** – Complete hackathon presentation scripts and walkthrough scenarios.
+- 👉 **[DEPLOYMENT_GUIDE.md](file:///d:/classmate_ai/DEPLOYMENT_GUIDE.md)** – Production deployment guide for Vercel, Render, Railway, and Docker.
 
 ---
 
@@ -29,10 +29,15 @@ For a step-by-step walkthrough script for presentations and hackathon evaluation
 classmate_ai/
 ├── .gitignore                    # Git ignore configurations (Python, Node, SQLite, secrets)
 ├── README.md                     # Comprehensive project documentation
+├── DEMO_GUIDE.md                 # Hackathon demonstration & presentation guide
+├── DEPLOYMENT_GUIDE.md           # Production deployment & infrastructure guide
+├── docker-compose.yml            # Multi-container production deployment definition
 ├── backend/                      # Python FastAPI application
-│   ├── .env.example              # Environment variables template
+│   ├── .env.example              # Production environment variables template
 │   ├── .env                      # Local development environment settings
-│   ├── requirements.txt          # Python dependencies
+│   ├── Dockerfile                # Production container specification with healthchecks
+│   ├── Procfile                  # Dynamic port process definition for PaaS
+│   ├── requirements.txt          # Python dependencies (including psycopg2 for postgres)
 │   ├── pytest.ini                # Pytest configuration
 │   ├── app/                      # Application source code
 │   │   ├── __init__.py

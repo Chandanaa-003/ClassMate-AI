@@ -30,6 +30,16 @@ def test_api_v1_health_check_endpoint():
     assert data["database"] == "connected"
 
 
+def test_readiness_check_endpoint():
+    response = client.get("/ready")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ready"
+    assert data["database"] == "connected"
+    assert data["storage"] == "writable"
+    assert "storage_path" in data
+
+
 if __name__ == "__main__":
     print("Running backend tests...")
     test_root_endpoint()
@@ -38,5 +48,7 @@ if __name__ == "__main__":
     print("PASS: test_health_check_endpoint")
     test_api_v1_health_check_endpoint()
     print("PASS: test_api_v1_health_check_endpoint")
+    test_readiness_check_endpoint()
+    print("PASS: test_readiness_check_endpoint")
     print("All backend tests passed successfully!")
 

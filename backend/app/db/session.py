@@ -1,8 +1,16 @@
+from pathlib import Path
 from typing import Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from app.core.config import settings
 from app.db.base import Base
+
+# Ensure target database directory exists if using file-based SQLite
+if settings.DATABASE_URL.startswith("sqlite:///"):
+    sqlite_path_str = settings.DATABASE_URL.replace("sqlite:///", "", 1)
+    if sqlite_path_str and not sqlite_path_str.startswith(":memory:"):
+        db_file_path = Path(sqlite_path_str).resolve()
+        db_file_path.parent.mkdir(parents=True, exist_ok=True)
 
 connect_args = {"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {}
 

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
     CORS_ORIGINS: Optional[Union[str, List[str]]] = None
+    CORS_ORIGIN_REGEX: Optional[str] = None
 
     # Persistent Audio Storage Path (defaults to backend/uploads/lectures if None)
     AUDIO_STORAGE_PATH: Optional[str] = None
@@ -59,10 +60,13 @@ class Settings(BaseSettings):
             v_trimmed = v.strip()
             if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
                 try:
-                    return json.loads(v_trimmed)
+                    parsed = json.loads(v_trimmed)
+                    return [str(origin).strip().rstrip("/") for origin in parsed if str(origin).strip()]
                 except Exception:
                     pass
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
+            return [origin.strip().rstrip("/") for origin in v.split(",") if origin.strip()]
+        elif isinstance(v, list):
+            return [str(origin).strip().rstrip("/") for origin in v if str(origin).strip()]
         return v
 
     @model_validator(mode="after")
@@ -74,12 +78,20 @@ class Settings(BaseSettings):
         # Support CORS_ORIGINS alias
         if self.CORS_ORIGINS:
             if isinstance(self.CORS_ORIGINS, str):
-                origins = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+                origins = [o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()]
             else:
-                origins = list(self.CORS_ORIGINS)
-            for o in origins:
-                if o not in self.BACKEND_CORS_ORIGINS:
-                    self.BACKEND_CORS_ORIGINS.append(o)
+                origins = [str(o).strip().rstrip("/") for o in self.CORS_ORIGINS if str(o).strip()]
+
+            # If running in production and BACKEND_CORS_ORIGINS has only default localhosts, replace with production origins
+            if self.ENVIRONMENT.lower() == "production" and self.BACKEND_CORS_ORIGINS == [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ]:
+                self.BACKEND_CORS_ORIGINS = origins
+            else:
+                for o in origins:
+                    if o not in self.BACKEND_CORS_ORIGINS:
+                        self.BACKEND_CORS_ORIGINS.append(o)
 
         # Support PORT environment variable (standard in Heroku, Render, Railway, Fly.io)
         env_port = os.environ.get("PORT")

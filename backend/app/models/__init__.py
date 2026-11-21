@@ -1,6 +1,7 @@
 """Database models package."""
 from app.models.announcement import Announcement, AnnouncementPriority
 from app.models.classroom import Classroom, ClassroomMembership
+from app.models.conversation import ChatMessage, Conversation
 from app.models.doubt import Answer, Doubt, Vote
 from app.models.feedback import Feedback
 from app.models.lecture import Lecture, LectureStatus
@@ -14,8 +15,10 @@ __all__ = [
     "Announcement",
     "AnnouncementPriority",
     "Answer",
+    "ChatMessage",
     "Classroom",
     "ClassroomMembership",
+    "Conversation",
     "Doubt",
     "Feedback",
     "Lecture",

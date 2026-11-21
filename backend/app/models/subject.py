@@ -7,6 +7,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.announcement import Announcement
     from app.models.classroom import Classroom
+    from app.models.conversation import Conversation
     from app.models.doubt import Doubt
     from app.models.feedback import Feedback
     from app.models.lecture import Lecture
@@ -72,6 +73,11 @@ class Subject(Base):
     )
     notifications: Mapped[List["Notification"]] = relationship(
         "Notification",
+        back_populates="subject",
+        cascade="all, delete-orphan",
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation",
         back_populates="subject",
         cascade="all, delete-orphan",
     )

@@ -1,13 +1,25 @@
 # ClassMate AI 🎓🤖
 
-ClassMate AI is an intelligent, modern learning companion designed to assist students and educators with study material organization, automated summaries, quiz generation, and interactive learning assistance.
+ClassMate AI is an intelligent, privacy-first classroom companion and lecture intelligence platform designed to assist students and educators with study material organization, lecture recording, multilingual AI audio transcription, structured smart notes, an interactive AI classroom assistant grounded in lecture transcripts with timestamps, anonymous doubt discussions, anonymous student feedback analytics, and real-time announcements & notifications.
 
-This repository contains the full-stack foundation, **Module 1: Authentication & RBAC**, **Module 2: Classroom Management & Membership**, **Module 3: Subject Management & Syllabi Organization**, **Module 4: Anonymous Doubt Discussion**, **Module 5: Lecture Recording and Upload System**, **Module 6: AI Audio Transcription and Smart Notes**, **Module 8: Anonymous Feedback and Lecturer Analytics**, and **Module 9: Notifications and Classroom Announcements**.
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, MediaRecorder browser audio capture, AuthContext state management.
-- **Backend**: Python FastAPI, Pydantic v2, PyJWT, Bcrypt, Python-Multipart, Aiofiles, OpenAI Whisper / GPT-4o-mini SDK, Uvicorn.
-- **Database**: SQLite with SQLAlchemy 2.0 ORM (`users`, `classrooms`, `classroom_memberships`, `subjects`, `doubts`, `answers`, `votes`, `lectures`, `transcripts`, `smart_notes`, `feedbacks`, `announcements`, `notifications`).
-- **Security**: One-way bcrypt password hashing, signed JWT bearer authentication, role-based protection (Student & Lecturer), classroom & subject membership isolation, zero-leak anonymous author masking, strict student identity isolation in feedback, private notification ownership, path traversal defense, file type/size validation, and background AI job isolation.
-- **Testing & Verification**: Comprehensive unit and integration test suites with 100% pass rates across all 9 modules.
+This repository contains the complete full-stack application across all 10 modules:
+- **Module 1: Authentication & Role-Based Access Control** (Student & Lecturer roles, bcrypt password hashing, signed JWT)
+- **Module 2: Classroom Management & Membership** (Join codes `CM-XXXX`, roster management, access control)
+- **Module 3: Subject Management & Syllabi Organization** (Subject CRUD, card browsing, search filters)
+- **Module 4: Anonymous Doubt Discussion Board** (Zero-leak anonymity, answers, accepted solutions, upvotes)
+- **Module 5: Lecture Recording and Upload System** (HTML5 MediaRecorder audio capture, upload, streaming, lecturer approval)
+- **Module 6: AI Audio Transcription and Smart Notes** (English, Kannada & mixed speech, segment timestamps, 9-section structured notes, manual edits)
+- **Module 7: AI Grounded Classroom Assistant** (Multi-turn conversational assistant grounded strictly in lecture transcripts with `[MM:SS]` timestamps, anti-hallucination guardrails)
+- **Module 8: Anonymous Feedback and Lecturer Analytics** (Multi-dimensional ratings, sentiment themes, zero identity exposure)
+- **Module 9: Notifications and Classroom Announcements** (Real-time in-app notification center, unread counters, broadcasts)
+- **Module 10: Final Integration & Quality Assurance** (Complete verification, 10/10 test suites passing, zero TypeScript errors, comprehensive [DEMO_GUIDE.md](file:///d:/classmate_ai/DEMO_GUIDE.md))
+
+---
+
+## 📖 Complete Hackathon Demo Guide
+
+For a step-by-step walkthrough script for presentations and hackathon evaluation, see:
+👉 **[DEMO_GUIDE.md](file:///d:/classmate_ai/DEMO_GUIDE.md)**
 
 ---
 

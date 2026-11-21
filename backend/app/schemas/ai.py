@@ -50,3 +50,48 @@ class SmartNoteResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class ChatSourceItem(BaseModel):
+    lecture_id: int
+    lecture_title: str
+    timestamp: str
+    start: float
+    snippet: str
+
+
+class ChatMessageSchema(BaseModel):
+    id: int
+    conversation_id: int
+    sender: str
+    content: str
+    sources: List[ChatSourceItem] = []
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatRequest(BaseModel):
+    question: str
+    conversation_id: Optional[int] = None
+    lecture_id: Optional[int] = None
+
+
+class ChatResponse(BaseModel):
+    conversation_id: int
+    message_id: int
+    answer: str
+    sources: List[ChatSourceItem] = []
+    is_grounded: bool = True
+    created_at: datetime
+
+
+class ConversationResponse(BaseModel):
+    id: int
+    title: str
+    subject_id: Optional[int] = None
+    lecture_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    messages: List[ChatMessageSchema] = []
+
+    model_config = ConfigDict(from_attributes=True)

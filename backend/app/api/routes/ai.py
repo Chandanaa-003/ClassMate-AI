@@ -7,11 +7,18 @@ from app.api.deps import get_current_active_user
 from app.api.routes.lecture import verify_classroom_access
 from app.core.storage import get_audio_file_path
 from app.db.session import SessionLocal, get_db
+from app.models.conversation import ChatMessage, Conversation
 from app.models.lecture import Lecture, LectureStatus
 from app.models.smart_note import SmartNote
+from app.models.subject import Subject
 from app.models.transcript import ProcessingStatus, Transcript
 from app.models.user import User
 from app.schemas.ai import (
+    ChatMessageSchema,
+    ChatRequest,
+    ChatResponse,
+    ChatSourceItem,
+    ConversationResponse,
     GenerateNotesRequest,
     SegmentSchema,
     SmartNoteResponse,
@@ -19,6 +26,7 @@ from app.schemas.ai import (
     TranscriptResponse,
     TranscriptUpdateRequest,
 )
+from app.services.ai.assistant import answer_classroom_question
 from app.services.ai.notes_generator import generate_smart_notes
 from app.services.ai.transcription import transcribe_audio_file
 from app.services.notification import create_notification
@@ -163,6 +171,39 @@ def build_smart_note_response(note: SmartNote) -> SmartNoteResponse:
     )
 
 
+def parse_sources(raw: Optional[str]) -> List[ChatSourceItem]:
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        return [ChatSourceItem(**item) for item in data]
+    except Exception:
+        return []
+
+
+def serialize_conversation(conv: Conversation) -> ConversationResponse:
+    messages = [
+        ChatMessageSchema(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender=m.sender,
+            content=m.content,
+            sources=parse_sources(m.sources_json),
+            created_at=m.created_at,
+        )
+        for m in conv.messages
+    ]
+    return ConversationResponse(
+        id=conv.id,
+        title=conv.title,
+        subject_id=conv.subject_id,
+        lecture_id=conv.lecture_id,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        messages=messages,
+    )
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -190,7 +231,6 @@ def trigger_transcription(
     is_lecturer, _ = verify_classroom_access(lecture.subject, current_user.id, db)
     is_uploader = lecture.uploaded_by_id == current_user.id
 
-    # If lecture is not approved, only uploader or classroom lecturer can access
     if lecture.approval_status != LectureStatus.APPROVED.value and not is_lecturer and not is_uploader:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -203,7 +243,6 @@ def trigger_transcription(
     transcript = db.query(Transcript).filter(Transcript.lecture_id == lecture.id).first()
 
     if transcript:
-        # Prevent duplicate jobs
         if transcript.status == ProcessingStatus.PROCESSING.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -213,7 +252,6 @@ def trigger_transcription(
         if transcript.status == ProcessingStatus.COMPLETED.value and not force_retry:
             return build_transcript_response(transcript)
 
-        # Reset for processing / retry
         transcript.status = ProcessingStatus.PROCESSING.value
         transcript.error_message = None
         db.commit()
@@ -289,7 +327,6 @@ def update_transcript(
     is_lecturer, _ = verify_classroom_access(lecture.subject, current_user.id, db)
     is_uploader = lecture.uploaded_by_id == current_user.id
 
-    # Only classroom lecturer or uploader can edit transcript text
     if not is_lecturer and not is_uploader:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -346,7 +383,6 @@ def trigger_generate_notes(
             detail="Access denied: Lecture recording has not been approved.",
         )
 
-    # Transcript must be COMPLETED before notes can be generated
     transcript = db.query(Transcript).filter(Transcript.lecture_id == lecture.id).first()
     if not transcript or transcript.status != ProcessingStatus.COMPLETED.value or not transcript.transcript_text:
         raise HTTPException(
@@ -358,7 +394,6 @@ def trigger_generate_notes(
     note = db.query(SmartNote).filter(SmartNote.lecture_id == lecture.id).first()
 
     if note:
-        # Prevent duplicate jobs
         if note.status == ProcessingStatus.PROCESSING.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -368,7 +403,6 @@ def trigger_generate_notes(
         if note.status == ProcessingStatus.COMPLETED.value and not force_retry:
             return build_smart_note_response(note)
 
-        # Reset status for regeneration
         note.status = ProcessingStatus.PROCESSING.value
         note.error_message = None
         db.commit()
@@ -421,3 +455,182 @@ def get_smart_notes(
 
     return build_smart_note_response(note)
 
+
+# ============================================================================
+# Module 7: AI Classroom Assistant Endpoints
+# ============================================================================
+
+@router.post(
+    "/subjects/{subject_id}/chat",
+    response_model=ChatResponse,
+    summary="Ask a question to the AI Classroom Assistant grounded in lecture transcripts",
+)
+def chat_with_classroom_assistant(
+    subject_id: int,
+    payload: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> ChatResponse:
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subject not found.",
+        )
+
+    verify_classroom_access(subject, current_user.id, db)
+
+    # 1. Retrieve or create Conversation for current user
+    conversation = None
+    if payload.conversation_id:
+        conversation = (
+            db.query(Conversation)
+            .filter(
+                Conversation.id == payload.conversation_id,
+                Conversation.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or not owned by user.",
+            )
+    else:
+        # Create a new conversation
+        short_title = payload.question.strip()[:60]
+        conversation = Conversation(
+            user_id=current_user.id,
+            subject_id=subject.id,
+            lecture_id=payload.lecture_id,
+            title=short_title or "New Discussion",
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+    # 2. Record student's question
+    user_msg = ChatMessage(
+        conversation_id=conversation.id,
+        sender="user",
+        content=payload.question.strip(),
+        sources_json=None,
+    )
+    db.add(user_msg)
+    db.commit()
+
+    # 3. Grounded retrieval & answer generation
+    result = answer_classroom_question(
+        db=db,
+        question=payload.question,
+        subject_id=subject.id,
+        lecture_id=payload.lecture_id,
+    )
+
+    sources_json = json.dumps(result["sources"]) if result.get("sources") else None
+
+    # 4. Record assistant's answer
+    assistant_msg = ChatMessage(
+        conversation_id=conversation.id,
+        sender="assistant",
+        content=result["answer"],
+        sources_json=sources_json,
+    )
+    db.add(assistant_msg)
+    db.commit()
+    db.refresh(assistant_msg)
+
+    source_items = [ChatSourceItem(**s) for s in result.get("sources", [])]
+
+    return ChatResponse(
+        conversation_id=conversation.id,
+        message_id=assistant_msg.id,
+        answer=result["answer"],
+        sources=source_items,
+        is_grounded=result.get("is_grounded", True),
+        created_at=assistant_msg.created_at,
+    )
+
+
+@router.get(
+    "/subjects/{subject_id}/chat/conversations",
+    response_model=List[ConversationResponse],
+    summary="List student's AI assistant conversations for a subject",
+)
+def list_conversations(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> List[ConversationResponse]:
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subject not found.",
+        )
+
+    verify_classroom_access(subject, current_user.id, db)
+
+    convs = (
+        db.query(Conversation)
+        .filter(
+            Conversation.subject_id == subject.id,
+            Conversation.user_id == current_user.id,
+        )
+        .order_by(Conversation.updated_at.desc())
+        .all()
+    )
+    return [serialize_conversation(c) for c in convs]
+
+
+@router.get(
+    "/chat/conversations/{conversation_id}",
+    response_model=ConversationResponse,
+    summary="Get conversation detail and message history",
+)
+def get_conversation_detail(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> ConversationResponse:
+    conv = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not conv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found or not owned by user.",
+        )
+    return serialize_conversation(conv)
+
+
+@router.delete(
+    "/chat/conversations/{conversation_id}",
+    summary="Delete conversation history (Owner only)",
+)
+def delete_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    conv = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not conv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found or not owned by user.",
+        )
+    db.delete(conv)
+    db.commit()
+    return {"success": True, "message": "Conversation deleted successfully."}

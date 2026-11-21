@@ -43,3 +43,40 @@ export interface SmartNote {
   updated_at?: string | null;
 }
 
+export interface ChatSourceItem {
+  lecture_id: number;
+  lecture_title: string;
+  timestamp: string;
+  start: number;
+  snippet: string;
+}
+
+export interface ChatMessage {
+  id?: number;
+  conversation_id?: number;
+  sender: 'user' | 'assistant' | 'system';
+  content: string;
+  sources?: ChatSourceItem[] | null;
+  created_at?: string;
+}
+
+export interface ChatResponse {
+  conversation_id: number;
+  message_id: number;
+  answer: string;
+  sources: ChatSourceItem[];
+  is_grounded: boolean;
+  created_at?: string;
+}
+
+export interface Conversation {
+  id: number;
+  subject_id?: number | null;
+  lecture_id?: number | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages: ChatMessage[];
+}
+
+

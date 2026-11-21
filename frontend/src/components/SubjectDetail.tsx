@@ -13,6 +13,7 @@ import { LectureLibrary } from './LectureLibrary';
 import { StudentFeedbackForm } from './StudentFeedbackForm';
 import { LecturerFeedbackAnalytics } from './LecturerFeedbackAnalytics';
 import { AnnouncementList } from './AnnouncementList';
+import { ClassroomAssistantChat } from './ClassroomAssistantChat';
 import {
   BookOpen,
   Calendar,
@@ -306,7 +307,7 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Study Materials</span>
+          <span>AI Study Assistant</span>
         </button>
 
         <button
@@ -459,17 +460,13 @@ export const SubjectDetail: React.FC<SubjectDetailProps> = ({
         </div>
       ))}
 
-      {/* Tab Content: Study Materials Placeholder */}
+      {/* Tab Content: Module 7 AI Classroom Assistant */}
       {activeWorkspaceTab === 'materials' && (
-        <div className="bg-white rounded-3xl p-10 border border-slate-200/80 text-center space-y-3 shadow-sm">
-          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl mx-auto flex items-center justify-center">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h4 className="text-sm font-bold text-slate-800">Study Materials & Notes</h4>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Lecture slides, notes, AI automated summaries, and quizzes will be available in this section.
-          </p>
-        </div>
+        <ClassroomAssistantChat
+          token={token}
+          subjectId={subject.id}
+          subjectName={subject.name}
+        />
       )}
 
       {/* Tab Content: Module 8 Anonymous Feedback & Analytics */}

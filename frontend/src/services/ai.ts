@@ -1,4 +1,4 @@
-import { SmartNote, Transcript } from '../types/ai';
+import { ChatResponse, Conversation, SmartNote, Transcript } from '../types/ai';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -90,4 +90,63 @@ export async function getLectureNotes(token: string, lectureId: number): Promise
   });
   return handleResponse<SmartNote>(res);
 }
+
+export async function askClassroomAssistant(
+  token: string,
+  subjectId: number,
+  question: string,
+  options?: { conversationId?: number; lectureId?: number }
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/subjects/${subjectId}/chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      question,
+      conversation_id: options?.conversationId || null,
+      lecture_id: options?.lectureId || null,
+    }),
+  });
+  return handleResponse<ChatResponse>(res);
+}
+
+export async function getSubjectConversations(
+  token: string,
+  subjectId: number
+): Promise<Conversation[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/subjects/${subjectId}/chat/conversations`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<Conversation[]>(res);
+}
+
+export async function getConversationDetail(
+  token: string,
+  conversationId: number
+): Promise<Conversation> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/chat/conversations/${conversationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<Conversation>(res);
+}
+
+export async function deleteConversation(
+  token: string,
+  conversationId: number
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/chat/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<{ success: boolean; message: string }>(res);
+}
+
 

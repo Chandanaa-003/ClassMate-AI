@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 import enum
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.conversation import Conversation
     from app.models.smart_note import SmartNote
     from app.models.subject import Subject
     from app.models.transcript import Transcript
@@ -62,6 +63,11 @@ class Lecture(Base):
         "SmartNote",
         back_populates="lecture",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation",
+        back_populates="lecture",
         cascade="all, delete-orphan",
     )
 

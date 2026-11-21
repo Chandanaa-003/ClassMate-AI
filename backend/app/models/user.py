@@ -8,6 +8,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.announcement import Announcement
     from app.models.classroom import Classroom, ClassroomMembership
+    from app.models.conversation import Conversation
     from app.models.doubt import Answer, Doubt, Vote
     from app.models.feedback import Feedback
     from app.models.lecture import Lecture
@@ -96,6 +97,12 @@ class User(Base):
         back_populates="recipient",
         cascade="all, delete-orphan",
         order_by="desc(Notification.created_at)",
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Conversation.updated_at)",
     )
 
     def __repr__(self) -> str:
